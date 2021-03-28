@@ -1,0 +1,6 @@
+[submodule "src/deps/gamekit"]
+	path = src/deps/gamekit
+	url = https://github.com/JonSnowbd/zig-gamekit
+[submodule "src/deps/flecs"]
+	path = src/deps/flecs
+	url = https://github.com/prime31/zig-flecs
