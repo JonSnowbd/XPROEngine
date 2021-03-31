@@ -20,7 +20,9 @@ const RenderType = enum {
 const RenderOrder = struct {
     typ: RenderType = RenderType.Rect,
     position: Vec2 = .{},
+    transform: gk.math.Mat32 = .{},
     color: gk.math.Color = gk.math.Color.fromBytes(255,255,255,255),
+    texture: ?gk.gfx.Texture = null,
     size: Vec2 = .{},
     source: RectI = .{},
     depth: f32 = 0,
@@ -69,6 +71,11 @@ pub fn flush() void {
             current_shader = order.*.shader;
         }
         switch (order.*.typ) {
+            RenderType.Tex => {
+                if(order.*.texture != null) {
+                    draw.texViewport(order.*.texture.?, order.*.source, order.*.transform);
+                }
+            },
             RenderType.Rect => {
                 draw.rect(order.*.position, order.*.size.x, order.*.size.y, order.*.color);
             },
@@ -86,6 +93,16 @@ pub fn flush() void {
     orders.items.len = 0;
 }
 
+pub fn tex(depth:f32, mat:gk.math.Mat32, _texture: ?gk.gfx.Texture, source:RectI, y_depth:?f32) void {
+    orders.append(.{
+        .typ = RenderType.Tex,
+        .transform = mat,
+        .source = source,
+        .texture = _texture,
+        .depth = depth,
+        .y_depth = y_depth
+    }) catch unreachable;
+}
 pub fn rect(depth:f32, x:f32, y:f32, w:f32, h:f32, col:gk.math.Color, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.Rect,
@@ -109,7 +126,6 @@ pub fn rectHollow(depth:f32, x:f32, y:f32, w:f32, h:f32, thick:f32, col:gk.math.
         .thickness=thick
     }) catch unreachable;
 }
-
 pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*gk.gfx.FontBook) void {
     orders.append(.{
         .typ = RenderType.Text,

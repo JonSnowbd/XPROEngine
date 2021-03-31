@@ -1,21 +1,23 @@
 const std = @import("std");
 const path = std.fs.path;
 const gamekit_build = @import("src/deps/gamekit/build.zig");
-const flecs_build = @import("src/deps/flecs/build.zig");
-const u = @import("src/core/util.zig");
+const ecs_build = @import("src/deps/ecs/build.zig");
+const u = @import("src/util.zig");
 
 const alloc = std.heap.page_allocator;
 
 pub fn build(b: *std.build.Builder) void {
+    // Add game content over:
+    add_game_content("content") catch unreachable;
+
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
     const exe = b.addExecutable("XProEngine", "src/main.zig");
-    add_game_content("content") catch unreachable;
 
     exe.setTarget(target);
     exe.setBuildMode(mode);
     gamekit_build.addGameKitToArtifact(b, exe, target, "./src/deps/gamekit/");
-    flecs_build.linkArtifact(b, exe, target, .static, "./src/deps/flecs/");
+    ecs_build.linkArtifact(b, exe, target, .static, "./src/deps/ecs/");
 
     var forwarded_deps: std.ArrayList(std.build.Pkg) = std.ArrayList(std.build.Pkg).init(b.allocator);
     for (exe.packages.items) |package| {
@@ -67,7 +69,6 @@ fn add_game_content(folder: []const u8)
     while (try file_iterator.next()) |target| {
         // Copy files
         if(target.kind == .File) {
-
             // If the dest doesnt exist or errors, just copy.
             var dest_file_info: std.fs.File = dest_folder.openFile(target.name, .{}) catch {
                 try source_folder.copyFile(target.name, dest_folder, target.name, .{});

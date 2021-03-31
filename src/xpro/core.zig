@@ -2,8 +2,9 @@ const std = @import("std");
 const gk = @import("gamekit");
 pub const render = @import("rendering.zig");
 pub const mem = @import("mem.zig");
-
-const ShadowShaderFs: []const u8 = @embedFile("shaders/shadows_fs.glsl");
+pub const ecs = @import("ecs.zig");
+pub const scene = @import("ecs/scene.zig");
+pub const load = @import("loader.zig");
 
 pub var clear: gk.math.Color = gk.math.Color.fromRgbBytes(20,20,20);
 /// The amount of time its been since the last render
@@ -18,17 +19,21 @@ pub var mouse_delta: gk.math.Vec2 = .{};
 pub var world_mouse_delta: gk.math.Vec2 = .{};
 /// The universal camera used in the game.
 pub var cam: gk.utils.Camera = .{};
+/// The currently playing scene that is updated every frame.
+pub var currentScene: scene.BasicScene = undefined;
+
 /// Resets the camera back to 0,0 position, ignoring zoom.
 pub fn reset_cam() void {
-    self.cam.pos.x = 0.0;
-    self.cam.pos.y = 0.0;
+    self.cam.pos = .{};
 }
 
 pub fn init(allocator: *std.mem.Allocator) !void {
     mem.initTmpAllocator();
+    load.init(allocator);
     try render.init(allocator);
 }
 pub fn deinit() !void {
+    load.deinit();
     try render.deinit();
 }
 
@@ -36,7 +41,7 @@ var last_mouse_pos: gk.math.Vec2 = .{};
 var world_last_mouse_pos: gk.math.Vec2 = .{};
 pub fn update() !void {
     // DT
-    dt = gk.time.timestep.raw_deltatime;
+    dt = gk.time.dt();
     // Input
     mouse_pos = gk.input.mousePos();
     world_mouse_pos = cam.screenToWorld(mouse_pos);
@@ -47,4 +52,6 @@ pub fn update() !void {
 
     last_mouse_pos = mouse_pos;
     world_last_mouse_pos = world_mouse_pos;
+
+    currentScene.updateFn(&currentScene);
 }
