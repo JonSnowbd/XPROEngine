@@ -41,7 +41,7 @@ var last_mouse_pos: gk.math.Vec2 = .{};
 var world_last_mouse_pos: gk.math.Vec2 = .{};
 pub fn update() !void {
     // DT
-    dt = gk.time.dt();
+    dt = (1.0/@intToFloat(f32, gk.time.frame_time)) / 10;
     // Input
     mouse_pos = gk.input.mousePos();
     world_mouse_pos = cam.screenToWorld(mouse_pos);

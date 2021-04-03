@@ -20,5 +20,6 @@ pub fn texture(path: []const u8) gk.gfx.Texture {
     }
     var tex = gk.gfx.Texture.initFromFile(allocator, path, gk.renderkit.TextureFilter.nearest) catch unreachable;
     textureHash.put(path, tex) catch unreachable;
+    std.debug.print("Successfully loaded texture: {s}\n", .{path});
     return tex;
 }

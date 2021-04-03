@@ -7,7 +7,7 @@ const GameScene = @import("game/GameScene.zig").GameScene;
 
 // Imgui stuff
 usingnamespace @import("imgui");
-pub const enable_imgui = true;
+pub const enable_imgui = false;
 
 pub fn main() !void {
     try gk.run(.{
@@ -28,9 +28,6 @@ fn init() !void {
 }
 
 fn update() !void {
-    if (gk.input.mouseDown(.left)) {
-        xpro.cam.pos = xpro.cam.pos.subv(xpro.mouse_delta);
-    }
     try xpro.update();
 }
 

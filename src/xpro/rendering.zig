@@ -37,9 +37,9 @@ fn orderSort(ctx:void, lhs:RenderOrder, rhs:RenderOrder) bool {
     var rdep = rhs.depth+(rhs.y_depth orelse 0);
     // Niche checks
     if(ldep == rdep) {
-        // Avoid texture breaks by primitive first, then textures.
+        // Avoid texture breaks by Textures first, then primitives.
         if(lhs.typ != RenderType.Tex and rhs.typ == RenderType.Tex) {
-            return true;
+            return false;
         }
     }
 
