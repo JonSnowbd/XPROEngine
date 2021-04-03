@@ -119,8 +119,8 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         var matrix = gk.math.Mat32.identity;
         matrix.translate(pos.value.x, pos.value.y);
         matrix.translate(-(@intToFloat(f32,spr.source.w) * spr.origin.x), -(@intToFloat(f32,spr.source.h) * spr.origin.y));
-        render.tex(depth.value, matrix, spr.texture, spr.source, null);
-        render.rect(depth.value+0.01, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
+        render.tex(depth.value, matrix, spr.texture, spr.source, pos.value.y);
+        render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
     }
 }
 pub fn drawParticleSystems(reg: *ecs.Registry) void {
@@ -169,7 +169,7 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
                 .y = 0,
                 .w = particle.sheetTileSize,
                 .h = particle.sheetTileSize
-            }, null);
+            }, pos.value.y);
         }
     }
 }

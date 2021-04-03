@@ -19,7 +19,7 @@ pub const GameScene = struct {
         self.scene.register.add(ent, cmp.Position.init(200,0));
         self.scene.register.add(ent, cmp.Sprite.initOrigin("content/Sheets/Brother.png",0.5,0.95));
         self.scene.register.add(ent, cmp.CameraFocus{});
-        self.scene.register.add(ent, cmp.Depth{.value=100});
+        self.scene.register.add(ent, cmp.Depth{.value=1});
         self.scene.register.add(ent, cmp.CharacterInput{});
         self.scene.register.add(ent, cmp.Brother{});
 
@@ -27,7 +27,7 @@ pub const GameScene = struct {
         self.scene.register.add(two, cmp.Position.init(-100,0));
         self.scene.register.add(two, cmp.Sprite.initOrigin("content/Sheets/Brother.png",0.5,0.95));
         self.scene.register.add(two, cmp.CameraFocus{});
-        self.scene.register.add(two, cmp.Depth{.value=100});
+        self.scene.register.add(two, cmp.Depth{.value=1});
         self.scene.register.add(two, cmp.CharacterInput{.mouseButton = gk.inputRaw.MouseButton.right});
         self.scene.register.add(two, cmp.Brother{});
 
@@ -51,7 +51,7 @@ pub const GameScene = struct {
             particles.reverseGravityAffector,
             particles.pointSpawner
         ));
-        self.scene.register.add(partsystem, cmp.Depth{.value=10});
+        self.scene.register.add(partsystem, cmp.Depth{.value=1});
 
         return self;
     }
@@ -64,7 +64,7 @@ pub const GameScene = struct {
 
         // Update
         sys.updateCharacterInput(&scene.register);
-        //sys.updateGameCamera(&scene.register, .Averaged);
+        sys.updateGameCamera(&scene.register, .Averaged);
         sys.updateBrotherSystem(&scene.register);
         sys.updateAnimation(&scene.register);
 
