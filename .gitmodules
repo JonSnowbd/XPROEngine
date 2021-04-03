@@ -3,4 +3,4 @@
 	url = https://github.com/JonSnowbd/zig-gamekit
 [submodule "src/deps/ecs"]
 	path = src/deps/ecs
-	url = https://github.com/prime31/zig-ecs
+	url = https://github.com/JonSnowbd/zig-ecs
