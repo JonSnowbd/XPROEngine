@@ -5,6 +5,8 @@ const cmp = @import("components.zig");
 const render = @import("../rendering.zig");
 const xpro = @import("../core.zig");
 
+const balance = xpro.balance;
+
 
 pub fn updateCharacterInput(reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.CharacterInput}, .{});
@@ -31,13 +33,14 @@ pub fn updateCharacterInput(reg: *ecs.Registry) void {
     }
 }
 pub fn updateBrotherSystem(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.CharacterInput, cmp.Brother, cmp.Position}, .{});
+    var view = ecs.Registry.view(reg, .{cmp.CharacterInput, cmp.Brother, cmp.Position, cmp.Sprite}, .{});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
         var pos = view.get(cmp.Position, ent);
         var brother = view.get(cmp.Brother, ent);
         var inp = view.get(cmp.CharacterInput, ent);
+        var sprite = view.get(cmp.Sprite, ent);
 
         if(inp.queuedAction == .MoveOrder) {
             brother.moving = true;
@@ -47,11 +50,14 @@ pub fn updateBrotherSystem(reg: *ecs.Registry) void {
 
         if(brother.moving) {
             var diff = brother.movementTarget.subv(pos.value).normalize();
-            if(pos.value.distance(brother.movementTarget) < (100.0 * xpro.dt)) {
+            if(pos.value.distance(brother.movementTarget) < (balance.BrotherSpeed * xpro.dt)) {
                 pos.value = brother.movementTarget;
                 brother.moving = false;
             } else{
-                pos.value = pos.value.addv(diff.scale(100.0 * xpro.dt));
+                var movement = diff.scale(balance.BrotherSpeed * xpro.dt);
+                pos.value = pos.value.addv(movement);
+
+                sprite.hFlip = movement.x < 0;
             }
         }
     }
@@ -117,8 +123,15 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         const depth = view.getConst(cmp.Depth, ent);
 
         var matrix = gk.math.Mat32.identity;
-        matrix.translate(pos.value.x, pos.value.y);
+        if(spr.hFlip) {
+            matrix.scale(-1,1);
+            matrix.translate(-pos.value.x, pos.value.y);
+        } else {
+            matrix.translate(pos.value.x, pos.value.y);
+        }
+        
         matrix.translate(-(@intToFloat(f32,spr.source.w) * spr.origin.x), -(@intToFloat(f32,spr.source.h) * spr.origin.y));
+
         render.tex(depth.value, matrix, spr.texture, spr.source, pos.value.y);
         render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
     }
@@ -131,8 +144,6 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
         const pos = view.getConst(cmp.Position, ent);
         const depth = view.getConst(cmp.Depth, ent);
         var particle = view.get(cmp.ParticleSystem, ent);
-
-        xpro.render.rect(10, pos.value.x-1, pos.value.y-1, 2, 2, gk.math.Color.red, null);
 
         if(particle.currentSpawnTimer < 0 and particle.liveParticles < particle.particles.len) {
             particle.spawner(&particle.particles[particle.liveParticles]);

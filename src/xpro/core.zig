@@ -5,6 +5,7 @@ pub const mem = @import("mem.zig");
 pub const ecs = @import("ecs.zig");
 pub const scene = @import("ecs/scene.zig");
 pub const load = @import("loader.zig");
+pub const balance = @import("balance.zig");
 
 pub var clear: gk.math.Color = gk.math.Color.fromRgbBytes(20,20,20);
 /// The amount of time its been since the last render

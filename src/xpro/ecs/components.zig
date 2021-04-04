@@ -22,6 +22,8 @@ pub const Sprite = struct {
     texture: gk.gfx.Texture = undefined,
     source: gk.math.RectI = .{},
     origin: gk.math.Vec2 = .{},
+    hFlip: bool = false,
+    vFlip: bool = false,
     pub fn init(path: []const u8) @This() {
         var tex = load.texture(path);
         return .{
@@ -44,16 +46,33 @@ pub const Sprite = struct {
         };
     }
 };
+pub const Tilemap = struct {
+    texture: gk.gfx.Texture = undefined,
+    tileSize: i32 = 0,
+
+
+    pub fn init(texture: []const u8, size: i32) @This() {
+        return .{
+            .texture = load.texture(texture),
+            .tileSize = size,
+        };
+    }
+
+    pub fn readTilemapData(filepath: []const u8) []usize {
+
+    }
+};
 pub const CharacterAnimation = struct {
     fps: i32 = 8,
     cycle:f32 = 0,
-    idle: []gk.math.RectI = undefined,
+    idle: []const gk.math.RectI = undefined,
     currentFrame: usize = 0,
-    pub fn init(fps:i32, idle: []gk.math.RectI) @This() {
-        return @This(){
+    pub fn init(fps:i32, idle: []const gk.math.RectI) @This() {
+        var value = @This(){
             .fps = fps,
-            .idle = idle
+            .idle = idle,
         };
+        return value;
     }
 };
 pub const CharacterInputType = enum(i32) {
@@ -66,6 +85,9 @@ pub const CharacterInputType = enum(i32) {
 pub const CharacterInput = struct {
     mouseButton: gk.inputRaw.MouseButton = gk.inputRaw.MouseButton.left,
     queuedAction: CharacterInputType = .Nothing,
+    pub fn init(inputButton: gk.inputRaw.MouseButton) @This() {
+        return @This(){.mouseButton=inputButton};
+    }
 };
 pub const Brother = struct {
     movementTarget: gk.math.Vec2 = .{},
