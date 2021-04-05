@@ -5,7 +5,7 @@ const Vec2 = gk.math.Vec2;
 const Rect = gk.math.Rect;
 const RectI = gk.math.RectI;
 
-const xpro = @import("core.zig");
+const xpro = @import("xpro.zig");
 
 const draw = gk.gfx.draw;
 

@@ -26,7 +26,7 @@ pub fn build(b: *std.build.Builder) void {
 
     exe.addPackage(.{
         .name="xpro",
-        .path="./src/xpro/core.zig",
+        .path="./src/xpro/xpro.zig",
         .dependencies = forwarded_deps.items
     });
     exe.install();

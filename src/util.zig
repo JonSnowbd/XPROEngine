@@ -1,4 +1,5 @@
 const std = @import("std");
+const gk = @import("gamekit");
 
 pub fn ReturnOf(comptime func: anytype) type {
     return switch (@typeInfo(@TypeOf(func))) {

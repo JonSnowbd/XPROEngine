@@ -6,8 +6,7 @@ const col = gk.math.Color;
 const GameScene = @import("game/GameScene.zig").GameScene;
 
 // Imgui stuff
-usingnamespace @import("imgui");
-pub const enable_imgui = false;
+pub const enable_imgui = true;
 
 pub fn main() !void {
     try gk.run(.{
@@ -17,7 +16,9 @@ pub fn main() !void {
         .shutdown = shutdown,
         .update_rate = 144,
         .window = .{
-            .title = "XPro"
+            .title = "XPro",
+            .width=1280,
+            .height=720,
         }
     });
 }
