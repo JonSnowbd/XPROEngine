@@ -64,6 +64,38 @@ pub fn updateBrotherSystem(reg: *ecs.Registry) void {
         }
     }
 }
+pub fn updateSisterSystem(reg: *ecs.Registry) void {
+    var view = ecs.Registry.view(reg, .{cmp.CharacterInput, cmp.Sister, cmp.Position, cmp.Sprite, cmp.CharacterAnimation}, .{});
+    var iter = view.iterator();
+
+    while(iter.next()) |ent| {
+        var pos = view.get(cmp.Position, ent);
+        var sister = view.get(cmp.Sister, ent);
+        var inp = view.get(cmp.CharacterInput, ent);
+        var sprite = view.get(cmp.Sprite, ent);
+        var anim = view.get(cmp.CharacterAnimation, ent);
+
+        if(inp.queuedAction == .Move) {
+            sister.moving = true;
+            sister.movementTarget = xpro.worldMousePos;
+            inp.queuedAction = .Nothing;
+            anim.set(.Run);
+        }
+
+        if(sister.moving) {
+            var diff = sister.movementTarget.subv(pos.value).normalize();
+            if(pos.value.distance(sister.movementTarget) < (balance.SisterSpeed * xpro.dt)) {
+                pos.value = sister.movementTarget;
+                sister.moving = false;
+                anim.set(.Idle);
+            } else{
+                var movement = diff.scale(balance.BrotherSpeed * xpro.dt);
+                pos.value = pos.value.addv(movement);
+                sprite.hFlip = movement.x < 0;
+            }
+        }
+    }
+}
 pub fn updateAnimation(reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.Sprite, cmp.CharacterAnimation}, .{cmp.Invisible});
     var iter = view.iterator();

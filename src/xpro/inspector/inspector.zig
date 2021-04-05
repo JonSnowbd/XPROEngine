@@ -8,18 +8,34 @@ usingnamespace @import("igExt.zig");
 
 const cmp = @import("../ecs/components.zig");
 
-var selectedEntity: ecs.Entity;
+var selectedEntity: ?ecs.Entity = null;
 
 fn _inspector(reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.Editable, cmp.Name}, .{});
     var iter = view.iterator();
 
+    igText("Entity List");
+    var height = @intToFloat(f32, gk.window.height()) * 0.33;
+    _ = igBeginChildStr("###EntityList", ImVec2{.x=0,.y=height}, true, ImGuiWindowFlags_None);
     while(iter.next()) |ent| {
         const name = view.getConst(cmp.Name, ent);
-        if(igFilledSelectable(name.value.ptr, ImGuiSelectableFlags_None)) {
-            
+        if(igSelectableAuto(name.value.ptr, ent == selectedEntity, ImGuiSelectableFlags_None)) {
+            selectedEntity = ent;
         }
     }
+    igEndChild();
+
+    if(selectedEntity != null) {
+        _ent(reg);
+    }
+}
+fn _ent(reg: *ecs.Registry) void {
+    var ent = selectedEntity.?;
+    const name = reg.getConst(cmp.Name, ent);
+
+    var x: []const u8 = std.fmt.allocPrint(xpro.mem.ringBuffer, "Editing <{s}>", .{name.value}) catch "Couldnt load name";
+    igText(x.ptr);
+    
 }
 
 pub fn update(world: *xpro.scene.BasicScene) void {

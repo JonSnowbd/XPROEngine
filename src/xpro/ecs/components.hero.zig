@@ -20,3 +20,7 @@ pub const Brother = struct {
     movementTarget: gk.math.Vec2 = .{},
     moving: bool = false,
 };
+pub const Sister = struct {
+    movementTarget: gk.math.Vec2 = .{},
+    moving: bool = false,
+};

@@ -17,7 +17,7 @@ pub const GameScene = struct {
         };
 
         ent.spawnBrother(&self.scene.register, 0,0, .left);
-        ent.spawnBrother(&self.scene.register, 200,0, .right);
+        ent.spawnSister(&self.scene.register, 200,0, .right);
 
         var partsystem = self.scene.register.create();
         self.scene.register.add(partsystem, cmp.Position.init(200,-20));
@@ -41,14 +41,22 @@ pub const GameScene = struct {
         var self: *@This() = scene.parent(@This());
 
         // Update
-        sys.updateCharacterInput(&scene.register);
+        if(xpro.debug == false) {
+            sys.updateCharacterInput(&scene.register);
+        }
+
         sys.updateBrotherSystem(&scene.register);
+        sys.updateSisterSystem(&scene.register);
         sys.updateAnimation(&scene.register);
-        
         sys.updateGameCamera(&scene.register, .Averaged);
 
         // Render
         sys.drawSprites(&scene.register);
         sys.drawParticleSystems(&scene.register);
+
+        if(gk.input.keyPressed(gk.inputRaw.Keys.f1)){
+            xpro.debug = !xpro.debug;
+        }
+            
     }
 };

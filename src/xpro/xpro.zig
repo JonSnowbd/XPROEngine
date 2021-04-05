@@ -58,9 +58,6 @@ pub fn update() !void {
 
     currentScene.updateFn(&currentScene);
 
-    if(gk.input.keyPressed(gk.inputRaw.Keys.f1))
-        debug = !debug;
-
     if(debug)
         inspector.update(&currentScene);
 }
