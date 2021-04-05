@@ -173,8 +173,9 @@ pub fn drawSprites(reg: *ecs.Registry) void {
 
         render.tex(depth.value, matrix, spr.texture, spr.source, pos.value.y);
 
-        if(xpro.debug)
+        if(xpro.debug){
             render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
+        }
     }
 }
 pub fn drawParticleSystems(reg: *ecs.Registry) void {
@@ -227,6 +228,28 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
             }, pos.value.y);
             if(xpro.debug)
                 xpro.render.rect(depth.value, pos.value.x+p.*.offset.x - o-1, pos.value.y+p.*.offset.y - o-1, 2,2, gk.math.Color.yellow, null);
+        }
+    }
+}
+pub fn drawTilemaps(reg: *ecs.Registry) void {
+    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.Tilemap, cmp.Depth}, .{cmp.Invisible});
+    var iter = view.iterator();
+
+    while(iter.next()) |ent| {
+        const pos = view.getConst(cmp.Position, ent);
+        const depth = view.getConst(cmp.Depth, ent);
+        var tile = view.get(cmp.Tilemap, ent);
+
+        if(xpro.debug)
+            render.rectHollow(depth.value, pos.value.x, pos.value.y, @intToFloat(f32, tile.xSize) * tile.tileSize, @intToFloat(f32, tile.ySize) * tile.tileSize, 1, gk.math.Color.yellow, null);
+
+        for(tile.data) |row, y| {
+            for(row) |data, x| {
+                var mat = gk.math.Mat32.identity;
+                mat.translate(pos.value.x + @intToFloat(f32, x) * tile.tileSize, pos.value.y + @intToFloat(f32, y) * tile.tileSize);
+                render.tex(depth.value, mat, tile.texture, tile.sourceLookup[data], null);
+            }
+
         }
     }
 }

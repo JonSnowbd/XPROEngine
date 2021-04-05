@@ -9,18 +9,11 @@ const GameScene = @import("game/GameScene.zig").GameScene;
 pub const enable_imgui = true;
 
 pub fn main() !void {
-    try gk.run(.{
-        .init = init,
-        .update = update,
-        .render = render,
-        .shutdown = shutdown,
-        .update_rate = 144,
-        .window = .{
-            .title = "XPro",
-            .width=1280,
-            .height=720,
-        }
-    });
+    try gk.run(.{ .init = init, .update = update, .render = render, .shutdown = shutdown, .update_rate = 144, .window = .{
+        .title = "XPro",
+        .width = 1280,
+        .height = 720,
+    } });
 }
 
 fn init() !void {

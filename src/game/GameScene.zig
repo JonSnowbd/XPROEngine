@@ -31,6 +31,20 @@ pub const GameScene = struct {
         ));
         self.scene.register.add(partsystem, cmp.Depth{.value=1});
 
+        var tm = self.scene.register.create();
+        self.scene.register.add(tm, cmp.Position.init(0,0));
+
+        var tilemap = cmp.Tilemap.init(std.heap.page_allocator, "content/Tiles/DungeonWorld.png", 64, 10,10);
+        tilemap.data[0][0] = 1;
+        tilemap.data[0][1] = 2;
+        tilemap.data[0][2] = 2;
+        tilemap.data[0][3] = 2;
+        tilemap.data[0][4] = 3;
+
+
+        self.scene.register.add(tm, tilemap);
+        self.scene.register.add(tm, cmp.Depth.init(0));
+
         return self;
     }
     pub fn deinit(self: *@This()) void {
@@ -53,6 +67,7 @@ pub const GameScene = struct {
         // Render
         sys.drawSprites(&scene.register);
         sys.drawParticleSystems(&scene.register);
+        sys.drawTilemaps(&scene.register);
 
         if(gk.input.keyPressed(gk.inputRaw.Keys.f1)){
             xpro.debug = !xpro.debug;
