@@ -50,7 +50,7 @@ pub fn update(world: *xpro.scene.BasicScene) void {
     
     igSetNextWindowPos(ImVec2{.x=4,.y=5}, ImGuiCond_Always, ImVec2{.x=0,.y=0});
     var height = @intToFloat(f32, gk.window.height() - 8);
-    igSetNextWindowSize(ImVec2{.x=300,.y=height-1},ImGuiCond_Always);
+    igSetNextWindowSize(ImVec2{.x=360,.y=height-1},ImGuiCond_Always);
 
     _ = igBegin("Inspector", null, flags);
 

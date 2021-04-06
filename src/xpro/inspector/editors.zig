@@ -30,22 +30,29 @@ pub fn tilemapEditor(scene: *xpro.scene.BasicScene, reg: *ecs.Registry, target: 
     }
     
     var wht = ImVec4{.x=1.0,.y=1.0,.z=1.0,.w=1.0};
+    var blk = ImVec4{.x=0.0,.y=0.0,.z=0.0,.w=1.0};
     var siz = ImVec2.init(32,32);
     var img = tile.texture;
     var total = tile.sourceLookup.len;
 
     var j: usize = 0;
+    var rowBreak: usize = @floatToInt(usize, img.width / tile.tileSize);
     while(j < total) {
         var sourceRect = tile.sourceLookup[j];
         var tl = ImVec2.init(@intToFloat(f32, sourceRect.x) / img.width, @intToFloat(f32, sourceRect.y) / img.height);
         var br = ImVec2.init(@intToFloat(f32, sourceRect.x+sourceRect.w) / img.width, @intToFloat(f32, sourceRect.y+sourceRect.h) / img.height);
-        igImage(img.imTextureID(),siz,tl,br,wht,wht);
 
-        if(@mod(j, 7) != 0) {
-            igSameLine(0,5);
+        if(@intCast(i32, j) == selectedTile) {
+            igImage(img.imTextureID(),siz,tl,br,wht,wht);
+        } else {
+            igImage(img.imTextureID(),siz,tl,br,wht,blk);
         }
         if(igIsItemClicked(ImGuiMouseButton_Left)) {
             selectedTile = @intCast(i32, j);
+        }
+
+        if(@mod(j+1, rowBreak) != 0) {
+            igSameLine(0,3);
         }
         j+=1;
     }
