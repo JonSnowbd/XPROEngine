@@ -2,6 +2,7 @@ const std = @import("std");
 const gk = @import("gamekit");
 const ecs = @import("ecs");
 const xpro = @import("../xpro.zig");
+pub const editor = @import("editors.zig");
 
 usingnamespace @import("imgui");
 usingnamespace @import("igExt.zig");
@@ -10,7 +11,10 @@ const cmp = @import("../ecs/components.zig");
 
 var selectedEntity: ?ecs.Entity = null;
 
-fn _inspector(reg: *ecs.Registry) void {
+fn _chatlog() void {
+    
+}
+fn _inspector(world: *xpro.scene.BasicScene, reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.Editable, cmp.Name}, .{});
     var iter = view.iterator();
 
@@ -26,16 +30,15 @@ fn _inspector(reg: *ecs.Registry) void {
     igEndChild();
 
     if(selectedEntity != null) {
-        _ent(reg);
-    }
-}
-fn _ent(reg: *ecs.Registry) void {
-    var ent = selectedEntity.?;
-    const name = reg.getConst(cmp.Name, ent);
+        var ent = selectedEntity.?;
+        const name = reg.getConst(cmp.Name, ent);
+        const ed: cmp.Editable = reg.getConst(cmp.Editable, ent);
 
-    var x: []const u8 = std.fmt.allocPrint(xpro.mem.ringBuffer, "Editing <{s}>", .{name.value}) catch "Couldnt load name";
-    igText(x.ptr);
-    
+        var x: []const u8 = std.fmt.allocPrint(xpro.mem.ringBuffer, "Editing <{s}>", .{name.value}) catch "Couldnt load name";
+        igText(x.ptr);
+        if(ed.editor != null)
+            ed.editor.?(world, reg, ent);
+    }
 }
 
 pub fn update(world: *xpro.scene.BasicScene) void {
@@ -51,7 +54,11 @@ pub fn update(world: *xpro.scene.BasicScene) void {
 
     _ = igBegin("Inspector", null, flags);
 
-    _inspector(&world.register);
+    _inspector(world, &world.register);
 
     igEnd();
+
+    if(gk.input.mouseDown(.middle)) {
+        xpro.cam.pos = xpro.cam.pos.subv(xpro.mouseDelta);
+    }
 }

@@ -40,10 +40,10 @@ pub const GameScene = struct {
         tilemap.data[0][2] = 2;
         tilemap.data[0][3] = 2;
         tilemap.data[0][4] = 3;
-
-
         self.scene.register.add(tm, tilemap);
         self.scene.register.add(tm, cmp.Depth.init(0));
+        self.scene.register.add(tm, cmp.Name.init("Tilemap"));
+        self.scene.register.add(tm, cmp.Editable.init(xpro.inspector.editor.tilemapEditor));
 
         return self;
     }
@@ -55,14 +55,15 @@ pub const GameScene = struct {
         var self: *@This() = scene.parent(@This());
 
         // Update
-        if(xpro.debug == false) {
+        if(xpro.debug == false)
             sys.updateCharacterInput(&scene.register);
-        }
 
         sys.updateBrotherSystem(&scene.register);
         sys.updateSisterSystem(&scene.register);
         sys.updateAnimation(&scene.register);
-        sys.updateGameCamera(&scene.register, .Averaged);
+
+        if(xpro.debug == false) 
+            sys.updateGameCamera(&scene.register, .Averaged);
 
         // Render
         sys.drawSprites(&scene.register);

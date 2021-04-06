@@ -245,9 +245,13 @@ pub fn drawTilemaps(reg: *ecs.Registry) void {
 
         for(tile.data) |row, y| {
             for(row) |data, x| {
+                if(data == -1) continue;
                 var mat = gk.math.Mat32.identity;
-                mat.translate(pos.value.x + @intToFloat(f32, x) * tile.tileSize, pos.value.y + @intToFloat(f32, y) * tile.tileSize);
-                render.tex(depth.value, mat, tile.texture, tile.sourceLookup[data], null);
+                var u = @intCast(usize, data);
+
+                var yPos = pos.value.y + @intToFloat(f32, y) * tile.tileSize;
+                mat.translate(pos.value.x + @intToFloat(f32, x) * tile.tileSize, yPos);
+                render.tex(depth.value, mat, tile.texture, tile.sourceLookup[u], yPos);
             }
 
         }

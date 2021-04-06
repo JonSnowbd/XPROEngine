@@ -49,7 +49,7 @@ pub const Sprite = struct {
 pub const Tilemap = struct {
     texture: gk.gfx.Texture = undefined,
     tileSize: f32 = 0.0,
-    data: [][]usize = undefined,
+    data: [][]i32 = undefined,
     xSize: i32 = 0,
     ySize: i32 = 0,
     sourceLookup: []gk.math.RectI = undefined,
@@ -60,16 +60,16 @@ pub const Tilemap = struct {
         var ret: @This() = .{
             .texture = load.texture(texture),
             .tileSize = size,
-            .data = allocator.alloc([]usize,@intCast(usize,yTiles)) catch unreachable,
+            .data = allocator.alloc([]i32,@intCast(usize,yTiles)) catch unreachable,
             .xSize = xTiles,
             .ySize = yTiles,
             .allocator = allocator
         };
 
         for(ret.data) |*dat| {
-            dat.* = allocator.alloc(usize, @intCast(usize,xTiles)) catch unreachable;
+            dat.* = allocator.alloc(i32, @intCast(usize,xTiles)) catch unreachable;
             for(dat.*) |*cell| {
-                cell.* = 0;
+                cell.* = -1;
             }
         }
 
