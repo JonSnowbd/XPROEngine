@@ -1,13 +1,20 @@
 const std = @import("std");
-const gk = @import("gamekit");
+pub const gk = @import("gamekit");
+pub const ecs = @import("ecs");
 pub const render = @import("rendering.zig");
 pub const mem = @import("mem.zig");
-pub const ecs = @import("ecs.zig");
 pub const scene = @import("ecs/scene.zig");
 pub const load = @import("loader.zig");
 pub const balance = @import("balance.zig");
 pub const inspector = @import("inspector/inspector.zig");
+pub const physics = @import("physics.zig");
 
+pub const component = @import("ecs/components.zig");
+pub const system = @import("ecs/systems.zig");
+
+pub const enable_imgui = true;
+
+/// The clear color of the background.
 pub var clear: gk.math.Color = gk.math.Color.fromRgbBytes(20,20,20);
 /// The amount of time its been since the last render
 pub var dt: f32 = 0.0;
@@ -22,19 +29,22 @@ pub var worldMouseDelta: gk.math.Vec2 = .{};
 /// The universal camera used in the game.
 pub var cam: gk.utils.Camera = .{};
 /// The currently playing scene that is updated every frame.
-pub var currentScene: scene.BasicScene = undefined;
+pub var currentScene: scene.Container = undefined;
+/// Whether or not the debug interface is open.
 pub var debug: bool = false;
-
-/// Resets the camera back to default.
-pub fn reset_cam() void {
-    self.cam.pos = .{};
-}
 
 pub fn init(allocator: *std.mem.Allocator) !void {
     mem.initTmpAllocator();
     load.init(allocator);
     try render.init(allocator);
+
+    try gk.run(.{ .init = _init, .update = update, .render = _render, .shutdown = _shutdown, .update_rate = 144, .window = .{
+        .title = "XPro",
+        .width = 1280,
+        .height = 720,
+    } });
 }
+
 pub fn deinit() !void {
     load.deinit();
     try render.deinit();
@@ -60,4 +70,15 @@ pub fn update() !void {
 
     if(debug)
         inspector.update(&currentScene);
+}
+
+fn _init() !void {
+}
+
+fn _render() !void {
+    render.flush();
+}
+
+fn _shutdown() !void {
+    try deinit();
 }

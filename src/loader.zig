@@ -10,7 +10,7 @@ pub fn init(alloc:*std.mem.Allocator) void {
     textureHash = textureHashType.init(allocator);
 }
 pub fn deinit() void {
-    
+    textureHash.deinit();
 }
 
 pub fn texture(path: []const u8) gk.gfx.Texture {

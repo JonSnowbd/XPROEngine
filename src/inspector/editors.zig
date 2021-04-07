@@ -31,7 +31,7 @@ pub fn tilemapEditor(scene: *xpro.scene.BasicScene, reg: *ecs.Registry, target: 
     
     var wht = ImVec4{.x=1.0,.y=1.0,.z=1.0,.w=1.0};
     var blk = ImVec4{.x=0.0,.y=0.0,.z=0.0,.w=1.0};
-    var siz = ImVec2.init(32,32);
+    var siz = ImVec2.init(30,30);
     var img = tile.texture;
     var total = tile.sourceLookup.len;
 

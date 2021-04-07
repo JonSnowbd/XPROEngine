@@ -1,8 +1,8 @@
+pub const editor = @import("editors.zig");
 const std = @import("std");
 const gk = @import("gamekit");
 const ecs = @import("ecs");
 const xpro = @import("../xpro.zig");
-pub const editor = @import("editors.zig");
 
 usingnamespace @import("imgui");
 usingnamespace @import("igExt.zig");
@@ -14,7 +14,7 @@ var selectedEntity: ?ecs.Entity = null;
 fn _chatlog() void {
     
 }
-fn _inspector(world: *xpro.scene.BasicScene, reg: *ecs.Registry) void {
+fn _inspector(world: *xpro.scene.Container, reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.Editable, cmp.Name}, .{});
     var iter = view.iterator();
 
@@ -41,7 +41,7 @@ fn _inspector(world: *xpro.scene.BasicScene, reg: *ecs.Registry) void {
     }
 }
 
-pub fn update(world: *xpro.scene.BasicScene) void {
+pub fn update(world: *xpro.scene.Container) void {
     const flags = 
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoMove |
