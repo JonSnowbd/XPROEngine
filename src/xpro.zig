@@ -1,16 +1,19 @@
 const std = @import("std");
-pub const gk = @import("gamekit");
-pub const ecs = @import("ecs");
 pub const render = @import("rendering.zig");
 pub const mem = @import("mem.zig");
 pub const scene = @import("ecs/scene.zig");
 pub const load = @import("loader.zig");
-pub const balance = @import("balance.zig");
 pub const inspector = @import("inspector/inspector.zig");
 pub const physics = @import("physics.zig");
 
 pub const component = @import("ecs/components.zig");
 pub const system = @import("ecs/systems.zig");
+pub const entity = @import("ecs/entities.zig");
+
+const gk = @import("gamekit");
+// Re-exporting types!
+pub const Vec2 = gk.math.Vec2;
+pub const Rect = gk.math.Rect;
 
 pub const enable_imgui = true;
 
@@ -33,26 +36,38 @@ pub var currentScene: scene.Container = undefined;
 /// Whether or not the debug interface is open.
 pub var debug: bool = false;
 
+var userInit: fn() anyerror!void = undefined;
+
 pub fn init(allocator: *std.mem.Allocator) !void {
     mem.initTmpAllocator();
     load.init(allocator);
     try render.init(allocator);
-
-    try gk.run(.{ .init = _init, .update = update, .render = _render, .shutdown = _shutdown, .update_rate = 144, .window = .{
-        .title = "XPro",
-        .width = 1280,
-        .height = 720,
-    } });
 }
 
-pub fn deinit() !void {
+pub fn run(userInitFn: fn() anyerror!void) !void {
+    userInit = userInitFn;
+    try gk.run(.{
+        .init = _init,
+        .update = update,
+        .render = _render,
+        .shutdown = _shutdown,
+        .update_rate = 60,
+        .window = .{
+            .title = "XPro",
+            .width = 1280,
+            .height = 720,
+        }
+    });
+}
+
+fn deinit() !void {
     load.deinit();
     try render.deinit();
 }
 
 var lastMousePos: gk.math.Vec2 = .{};
 var worldLastMousePos: gk.math.Vec2 = .{};
-pub fn update() !void {
+fn update() !void {
     // DT
     dt = (1.0/@intToFloat(f32, gk.time.frame_time)) / 10;
 
@@ -73,8 +88,8 @@ pub fn update() !void {
 }
 
 fn _init() !void {
+    try userInit();
 }
-
 fn _render() !void {
     render.flush();
 }

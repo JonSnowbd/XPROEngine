@@ -3,14 +3,14 @@ const ecs = @import("ecs");
 const xpro = @import("../xpro.zig");
 const gk = @import("gamekit");
 
-const cmp = xpro.ecs.component;
+const cmp = xpro.component;
 const render = xpro.render;
 
 usingnamespace @import("imgui");
 
 var selectedTile: i32 = 0;
 
-pub fn tilemapEditor(scene: *xpro.scene.BasicScene, reg: *ecs.Registry, target: ecs.Entity) void {
+pub fn tilemapEditor(scene: *xpro.scene.Container, reg: *ecs.Registry, target: ecs.Entity) void {
     var io = igGetIO();
 
     const pos = reg.getConst(cmp.Position, target);

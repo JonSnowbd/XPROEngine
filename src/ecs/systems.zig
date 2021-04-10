@@ -168,3 +168,13 @@ pub fn drawTilemaps(reg: *ecs.Registry) void {
         }
     }
 }
+
+pub fn defaultDrawSystems(reg: *ecs.Registry) void {
+    drawSprites(reg);
+    drawParticleSystems(reg);
+    drawTilemaps(reg);
+}
+pub fn defaultUpdateSystems(reg: *ecs.Registry) void {
+    updateAnimation(reg);
+    updateGameCamera(reg, .Averaged);
+}

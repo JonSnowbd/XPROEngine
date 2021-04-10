@@ -1,1 +1,0 @@
-pub const characterDepth: f32 = 20.0;

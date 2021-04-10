@@ -5,6 +5,17 @@ const ecs_build = @import("src/deps/ecs/build.zig");
 
 const alloc = std.heap.page_allocator;
 
+pub fn build(b: *std.build.Builder) void {
+    const target = b.standardTargetOptions(.{});
+    const mode = b.standardReleaseOptions();
+    const testing = b.addTest("src/tests.zig");
+    linkXpro(b, testing, target, "./") catch unreachable;
+    testing.setTarget(target);
+    testing.setBuildMode(mode);
+
+    const test_step = b.step("test", "Runs all of xpro's test cases.");
+    test_step.dependOn(&testing.step);
+}
 pub fn linkXpro(b: *std.build.Builder, exe: *std.build.LibExeObjStep, target: std.build.Target, comptime prefixPath: []const u8) !void {
     gamekit_build.addGameKitToArtifact(b, exe, target, prefixPath++"src/deps/gamekit/");
     ecs_build.linkArtifact(b, exe, target, .static, prefixPath++"src/deps/ecs/");
@@ -20,7 +31,6 @@ pub fn linkXpro(b: *std.build.Builder, exe: *std.build.LibExeObjStep, target: st
         .dependencies = forwarded_deps.items
     });
 }
-
 /// add game content to the bin output, is efficient and only adds and copies newer assets.
 pub fn addContent(folder: []const u8) anyerror!void {
     // Construct paths.
