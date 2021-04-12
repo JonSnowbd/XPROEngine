@@ -15,8 +15,6 @@ const gk = @import("gamekit");
 pub const Vec2 = gk.math.Vec2;
 pub const Rect = gk.math.Rect;
 
-pub const enable_imgui = true;
-
 /// The clear color of the background.
 pub var clear: gk.math.Color = gk.math.Color.fromRgbBytes(20,20,20);
 /// The amount of time its been since the last render

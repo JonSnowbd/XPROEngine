@@ -85,7 +85,9 @@ pub fn flush() void {
             RenderType.Text => {
                 draw.text(order.*.text, order.*.position.x, order.*.position.y, order.*.font);
             },
-            else => {}
+            RenderType.Circle => {
+                draw.ellipse(order.*.position, order.*.size.x, order.*.size.y, order.*.thickness, 4, order.*.color);
+            }
         }
     }
     gk.gfx.endPass();
@@ -134,6 +136,17 @@ pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*gk
         .y_depth = y_depth,
         .depth = depth,
         .font = font
+    }) catch unreachable;
+}
+pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col:gk.math.Color, y_depth:?f32) void {
+    orders.append(.{
+        .typ = RenderType.Circle,
+        .position = .{.x=x,.y=y},
+        .size = .{.x=sizeX,.y=sizeY},
+        .color = col,
+        .depth = depth,
+        .y_depth=y_depth,
+        .thickness=thickness
     }) catch unreachable;
 }
 pub fn textFmt(depth:f32, fmt:[]const u8, vars: anytype, x:f32, y:f32, y_depth:?f32, font:?*gk.gfx.FontBook) void {

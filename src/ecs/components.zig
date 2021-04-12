@@ -197,3 +197,25 @@ pub const ParticleSystem = struct {
         self.allocator.free(self.particles);
     }
 };
+pub const Animation = struct {
+    currentAnimation: []const gk.math.RectI,
+    fps: i32 = 8,
+    currentFrame: usize = 0,
+    cycle: f32 = 0.0,
+    pub fn init(animation: []const gk.math.RectI, framesPerSecond: i32) @This() {
+        return .{
+            .currentAnimation = animation,
+            .fps = framesPerSecond,
+        };
+    }
+};
+pub const Shadow = struct {
+    offset: gk.math.Vec2,
+    size: gk.math.Vec2,
+    pub fn init(sizeX:f32,sizeY:f32) @This() {
+        return .{
+            .offset = .{.x=0,.y=0},
+            .size= .{.x=sizeX, .y=sizeY}
+        };
+    }
+};

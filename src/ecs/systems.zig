@@ -8,28 +8,23 @@ const xpro = @import("../xpro.zig");
 const balance = xpro.balance;
 
 pub fn updateAnimation(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Sprite, cmp.CharacterAnimation}, .{cmp.Invisible});
+    var view = ecs.Registry.view(reg, .{cmp.Sprite, cmp.Animation}, .{cmp.Invisible});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
-        var anim = view.get(cmp.CharacterAnimation, ent);
-        var sprite = view.get(cmp.Sprite, ent);
-
-        var currentAnim = switch (anim.currentAnimation) {
-            .Idle => anim.idle,
-            .Run => anim.run
-        };
+        var anim: *cmp.Animation = view.get(cmp.Animation, ent);
+        var sprite: *cmp.Sprite = view.get(cmp.Sprite, ent);
 
         const requiredDelta: f32 = 1.0/@intToFloat(f32, anim.fps);
         anim.cycle += xpro.dt;
         if(anim.cycle >requiredDelta) {
             anim.cycle -= requiredDelta;
             anim.currentFrame += 1;
-            if(anim.currentFrame >= currentAnim.len) {
+            if(anim.currentFrame >= anim.currentAnimation.len) {
                 anim.currentFrame = 0;
             }
         }
-        sprite.source = currentAnim[anim.currentFrame];
+        sprite.source = anim.currentAnimation[anim.currentFrame];
     }
 }
 
@@ -39,6 +34,9 @@ pub const GameCameraUpdateStyle = enum {
     Averaged
 };
 pub fn updateGameCamera(reg: *ecs.Registry, style: GameCameraUpdateStyle) void {
+    if(xpro.debug)
+        return;
+    
     var view = ecs.Registry.view(reg, .{cmp.CameraFocus, cmp.Position}, .{cmp.Invisible});
     var iter = view.iterator();
 
@@ -87,6 +85,17 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         if(xpro.debug){
             render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
         }
+    }
+}
+pub fn drawShadows(reg: *ecs.Registry) void {
+    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.Shadow, cmp.Depth}, .{cmp.Invisible});
+    var iter = view.iterator();
+    while(iter.next()) |ent| {
+        const pos = view.getConst(cmp.Position, ent);
+        const shad = view.getConst(cmp.Shadow, ent);
+        const depth = view.getConst(cmp.Depth, ent);
+
+        render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, 9, gk.math.Color.fromRgba(0,0,0,0.4), null);
     }
 }
 pub fn drawParticleSystems(reg: *ecs.Registry) void {
@@ -170,6 +179,7 @@ pub fn drawTilemaps(reg: *ecs.Registry) void {
 }
 
 pub fn defaultDrawSystems(reg: *ecs.Registry) void {
+    drawShadows(reg);
     drawSprites(reg);
     drawParticleSystems(reg);
     drawTilemaps(reg);
