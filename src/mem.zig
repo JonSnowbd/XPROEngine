@@ -1,6 +1,8 @@
 const std = @import("std");
 const mem = std.mem;
 
+// Credit to prime31's various zig projects, very useful allocator
+
 pub const ScratchAllocator = struct {
     allocator: mem.Allocator,
     backup_allocator: *mem.Allocator,
@@ -8,7 +10,7 @@ pub const ScratchAllocator = struct {
     buffer: []u8,
 
     pub fn init(a: *mem.Allocator) ScratchAllocator {
-        const scratch_buffer = a.alloc(u8, 2 * 1024 * 1024) catch unreachable;
+        const scratch_buffer = a.alloc(u8, 8 * 1024 * 1024) catch unreachable;
 
         return ScratchAllocator{
             .allocator = mem.Allocator{
@@ -46,7 +48,7 @@ pub const ScratchAllocator = struct {
     }
 };
 
-// temp allocator is a ring buffer so memory doesnt need to be freed
+/// This is a ring buffer so memory doesnt need to be freed.
 pub var ringBuffer: *mem.Allocator = undefined;
 var _allocInstance: ScratchAllocator = undefined;
 

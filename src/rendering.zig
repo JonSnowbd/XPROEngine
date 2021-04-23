@@ -1,13 +1,6 @@
 const std = @import("std");
-const gk = @import("gamekit");
-const math = gk.math;
-const Vec2 = gk.math.Vec2;
-const Rect = gk.math.Rect;
-const RectI = gk.math.RectI;
-
 const xpro = @import("xpro.zig");
-
-const draw = gk.gfx.draw;
+const ray = xpro.raylib;
 
 const RenderType = enum {
     Rect,
@@ -19,18 +12,22 @@ const RenderType = enum {
 
 const RenderOrder = struct {
     typ: RenderType = RenderType.Rect,
-    position: Vec2 = .{},
-    transform: gk.math.Mat32 = .{},
-    color: gk.math.Color = gk.math.Color.fromBytes(255,255,255,255),
-    texture: ?gk.gfx.Texture = null,
-    size: Vec2 = .{},
-    source: RectI = .{},
-    depth: f32 = 0,
+
+    position: xpro.Vec = .{},
+    size:     xpro.Vec = .{},
+    rotation: f32 = 0,
+
+    color: xpro.Color = .{.r=255,.g=255,.b=255,.a=255},
+    texture: ?xpro.Texture = null,
+    source: xpro.Rect = .{},
+
     text: []const u8 = "",
-    shader: ?*gk.gfx.Shader = null,
+    depth:    f32 = 0,
     y_depth: ?f32 = null,
     thickness:f32 = 0,
-    font:?*gk.gfx.FontBook = null,
+
+    shader: ?*xpro.Shader = null,
+    font:   ?*xpro.Font = null,
 };
 fn orderSort(ctx:void, lhs:RenderOrder, rhs:RenderOrder) bool {
     var ldep = lhs.depth+(lhs.y_depth orelse 0);
@@ -53,59 +50,65 @@ pub fn init(allocator:*std.mem.Allocator) !void {
     orders = std.ArrayList(RenderOrder).init(allocator);
 }
 /// You do not need to call this unless you are using the rendering standalone, as
-/// `(xpro.zig).init(alloc)` will call this for you.
+/// `(xpro.zig).deinit()` will call this for you.
 pub fn deinit() !void {
     orders.deinit();
 }
 
 pub fn flush() void {
-    var current_shader: ?*gk.gfx.Shader = null;
-
     std.sort.sort(RenderOrder, orders.items, {}, orderSort);
-
-    gk.gfx.beginPass(.{.color=xpro.clear, .trans_mat = xpro.cam.transMat()});
+    ray.ClearBackground(xpro.theme.Clear);
     for (orders.items) |*order, i| {
-        if(order.*.shader != current_shader) {
-            gk.gfx.endPass();
-            gk.gfx.beginPass(.{.shader = order.*.shader, .trans_mat = xpro.cam.transMat()});
-            current_shader = order.*.shader;
-        }
+        // if(order.*.shader != current_shader) {
+        //     gk.gfx.endPass();
+        //     gk.gfx.beginPass(.{.shader = order.*.shader, .trans_mat = xpro.cam.transMat()});
+        //     current_shader = order.*.shader;
+        // }
+        var posX: c_int = @floatToInt(c_int, order.position.x);
+        var posY: c_int = @floatToInt(c_int, order.position.y);
+        var sizeX: c_int = @floatToInt(c_int, order.size.x);
+        var sizeY: c_int = @floatToInt(c_int, order.size.y);
         switch (order.*.typ) {
             RenderType.Tex => {
-                if(order.*.texture != null) {
-                    draw.texViewport(order.*.texture.?, order.*.source, order.*.transform);
+                if(order.texture != null) {
+                    var dest = xpro.Rect{
+                        .x = order.position.x,
+                        .y = order.position.y,
+                        .width = order.size.x,
+                        .height = order.size.y,
+                    };
+                    ray.DrawTexturePro(order.texture.?, order.source, dest, xpro.Vec{}, order.rotation, order.color);
                 }
             },
             RenderType.Rect => {
-                draw.rect(order.*.position, order.*.size.x, order.*.size.y, order.*.color);
+                ray.DrawRectangle(posX, posY, sizeX, sizeY, order.color);
             },
             RenderType.RectHollow => {
-                draw.hollowRect(order.*.position, order.*.size.x, order.*.size.y, order.*.thickness, order.*.color);
+                ray.DrawRectangleLines(posX, posY, sizeX, sizeY, order.color);
             },
             RenderType.Text => {
-                draw.text(order.*.text, order.*.position.x, order.*.position.y, order.*.font);
+                ray.DrawText(order.text.ptr, posX, posY, 10, order.color);
             },
             RenderType.Circle => {
-                draw.ellipse(order.*.position, order.*.size.x, order.*.size.y, order.*.thickness, 4, order.*.color);
+                ray.DrawEllipse(posX, posY, order.size.x, order.size.y, order.color);
             }
         }
     }
-    gk.gfx.endPass();
-
     orders.items.len = 0;
 }
 
-pub fn tex(depth:f32, mat:gk.math.Mat32, _texture: ?gk.gfx.Texture, source:RectI, y_depth:?f32) void {
+pub fn tex(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, source:xpro.Rect, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.Tex,
-        .transform = mat,
+        .size= size,
+        .position = pos,
         .source = source,
         .texture = _texture,
         .depth = depth,
         .y_depth = y_depth
     }) catch unreachable;
 }
-pub fn rect(depth:f32, x:f32, y:f32, w:f32, h:f32, col:gk.math.Color, y_depth:?f32) void {
+pub fn rect(depth:f32, x:f32, y:f32, w:f32, h:f32, col:xpro.Color, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.Rect,
         .position = .{.x=x,.y=y},
@@ -114,10 +117,10 @@ pub fn rect(depth:f32, x:f32, y:f32, w:f32, h:f32, col:gk.math.Color, y_depth:?f
         .size = .{.x=w, .y=h}
     }) catch unreachable;
 }
-pub fn rectPro(depth:f32, target: Rect, col: gk.math.Color, y_depth:?f32) void {
+pub fn rectPro(depth:f32, target: Rect, col: xpro.Color, y_depth:?f32) void {
     rect(depth, target.x, target.y, target.w, target.h, col, y_depth);
 }
-pub fn rectHollow(depth:f32, x:f32, y:f32, w:f32, h:f32, thick:f32, col:gk.math.Color, y_depth:?f32) void {
+pub fn rectHollow(depth:f32, x:f32, y:f32, w:f32, h:f32, thick:f32, col:xpro.Color, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.RectHollow,
         .position = .{.x=x,.y=y},
@@ -128,7 +131,7 @@ pub fn rectHollow(depth:f32, x:f32, y:f32, w:f32, h:f32, thick:f32, col:gk.math.
         .thickness=thick
     }) catch unreachable;
 }
-pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*gk.gfx.FontBook) void {
+pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*xpro.Font) void {
     orders.append(.{
         .typ = RenderType.Text,
         .position = .{.x=x, .y=y},
@@ -138,7 +141,7 @@ pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*gk
         .font = font
     }) catch unreachable;
 }
-pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col:gk.math.Color, y_depth:?f32) void {
+pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col:xpro.Color, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.Circle,
         .position = .{.x=x,.y=y},
@@ -149,7 +152,7 @@ pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col
         .thickness=thickness
     }) catch unreachable;
 }
-pub fn textFmt(depth:f32, fmt:[]const u8, vars: anytype, x:f32, y:f32, y_depth:?f32, font:?*gk.gfx.FontBook) void {
+pub fn textFmt(depth:f32, fmt:[]const u8, vars: anytype, x:f32, y:f32, y_depth:?f32, font:?*xpro.Font) void {
     const _text: []const u8 = std.fmt.allocPrint(xpro.mem.ringBuffer, fmt, vars) catch {
         text(depth, "Failed to alloc the format", x, y, y_depth, font);
         return;

@@ -1,12 +1,27 @@
 const std = @import("std");
 const ecs = @import("ecs");
-const gk = @import("gamekit");
 const cmp = @import("components.zig");
 const render = @import("../rendering.zig");
-const xpro = @import("../xpro.zig");
+const xpro = @import("../xpro.zig");//gk
 
 const balance = xpro.balance;
 
+pub fn updateAttachments(reg: *ecs.Registry) void {
+    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.AttachedTo}, .{});
+    var iter = view.iterator();
+
+    while(iter.next()) |ent| {
+        var pos = view.get(cmp.Position, ent);
+        const attachment = view.getConst(cmp.AttachedTo, ent);
+
+        if(!reg.has(cmp.Position, attachment.parent))
+            continue;
+
+        const target = view.getConst(cmp.Position, attachment.parent);
+
+        pos.value = target.value.addv(attachment.offset);
+    } 
+}
 pub fn updateAnimation(reg: *ecs.Registry) void {
     var view = ecs.Registry.view(reg, .{cmp.Sprite, cmp.Animation}, .{cmp.Invisible});
     var iter = view.iterator();
@@ -39,15 +54,16 @@ pub fn updateGameCamera(reg: *ecs.Registry, style: GameCameraUpdateStyle) void {
     
     var view = ecs.Registry.view(reg, .{cmp.CameraFocus, cmp.Position}, .{cmp.Invisible});
     var iter = view.iterator();
+    if(iter.entities.len == 0) { return; }
 
-    var total = gk.math.Vec2{};
-    var last = gk.math.Vec2{};
+    var total = xpro.Vec{};
+    var last = xpro.Vec{};
     var count: i32 = 0;
 
     while(iter.next()) |ent| {
         const pos = view.getConst(cmp.Position, ent);
         if(count == 0 and style == .First) {
-            xpro.cam.pos = pos.value;
+            xpro.cam.target = pos.value;
             return;
         }
         last = pos.value;
@@ -55,10 +71,10 @@ pub fn updateGameCamera(reg: *ecs.Registry, style: GameCameraUpdateStyle) void {
         count += 1;
     }
     if(style == .Averaged) {
-        xpro.cam.pos = total.scaleDiv(@intToFloat(f32, count));
+        xpro.cam.target = total.scaleDiv(@intToFloat(f32, count));
     }
     if(style == .Last) {
-        xpro.cam.pos = last;
+        xpro.cam.target = last;
     }
 }
 pub fn drawSprites(reg: *ecs.Registry) void {
@@ -70,20 +86,11 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         const spr = view.getConst(cmp.Sprite, ent);
         const depth = view.getConst(cmp.Depth, ent);
 
-        var matrix = gk.math.Mat32.identity;
-        if(spr.hFlip) {
-            matrix.scale(-1,1);
-            matrix.translate(-pos.value.x, pos.value.y);
-        } else {
-            matrix.translate(pos.value.x, pos.value.y);
-        }
-        
-        matrix.translate(-(@intToFloat(f32,spr.source.w) * spr.origin.x), -(@intToFloat(f32,spr.source.h) * spr.origin.y));
-
-        render.tex(depth.value, matrix, spr.texture, spr.source, pos.value.y);
+        var dest = xpro.Vec{.x=spr.source.width,.y=spr.source.height};
+        render.tex(depth.value, pos.value, spr.texture,dest, spr.source, pos.value.y);
 
         if(xpro.debug){
-            render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.pink, null);
+            render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, xpro.Color{}, null);
         }
     }
 }
@@ -95,7 +102,7 @@ pub fn drawShadows(reg: *ecs.Registry) void {
         const shad = view.getConst(cmp.Shadow, ent);
         const depth = view.getConst(cmp.Depth, ent);
 
-        render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, 9, gk.math.Color.fromRgba(0,0,0,0.4), null);
+        render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, 9, xpro.Color{.r=0,.g=0,.b=0,.a=100}, pos.value.y-0.001);
     }
 }
 pub fn drawParticleSystems(reg: *ecs.Registry) void {
@@ -108,7 +115,7 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
         var particle = view.get(cmp.ParticleSystem, ent);
 
         if(xpro.debug)
-            render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, gk.math.Color.red, null);
+            render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, xpro.Color{}, null);
 
         if(particle.currentSpawnTimer < 0 and particle.liveParticles < particle.particles.len) {
             particle.spawner(&particle.particles[particle.liveParticles]);
@@ -135,19 +142,18 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
                 continue;
             }
             particle.affector(p);
-            
-            var mat = gk.math.Mat32.identity;
 
             var o: f32 = (@intToFloat(f32, particle.sheetTileSize) * 0.5);
-            mat.translate(pos.value.x+p.*.offset.x - o, pos.value.y+p.*.offset.y - o);
-            xpro.render.tex(depth.value,mat,particle.textureSheet,.{
-                .x = p.*.texIndex * particle.sheetTileSize,
+            var finalPos = xpro.Vec{.x=pos.value.x+p.*.offset.x - o, .y=pos.value.y+p.*.offset.y - o};
+            var size = xpro.Vec{.x=@intToFloat(f32,particle.sheetTileSize),.y=@intToFloat(f32,particle.sheetTileSize)};
+            xpro.render.tex(depth.value,finalPos,particle.textureSheet, size,.{
+                .x = @intToFloat(f32, p.*.texIndex * particle.sheetTileSize),
                 .y = 0,
-                .w = particle.sheetTileSize,
-                .h = particle.sheetTileSize
+                .width = @intToFloat(f32,particle.sheetTileSize),
+                .height = @intToFloat(f32,particle.sheetTileSize)
             }, pos.value.y);
             if(xpro.debug)
-                xpro.render.rect(depth.value, pos.value.x+p.*.offset.x - o-1, pos.value.y+p.*.offset.y - o-1, 2,2, gk.math.Color.yellow, null);
+                xpro.render.rect(depth.value, pos.value.x+p.*.offset.x - o-1, pos.value.y+p.*.offset.y - o-1, 2,2, xpro.theme.Debug, null);
         }
     }
 }
@@ -161,17 +167,17 @@ pub fn drawTilemaps(reg: *ecs.Registry) void {
         var tile = view.get(cmp.Tilemap, ent);
 
         if(xpro.debug)
-            render.rectHollow(depth.value, pos.value.x, pos.value.y, @intToFloat(f32, tile.xSize) * tile.tileSize, @intToFloat(f32, tile.ySize) * tile.tileSize, 1, gk.math.Color.yellow, null);
+            render.rectHollow(depth.value, pos.value.x, pos.value.y, @intToFloat(f32, tile.xSize) * tile.tileSize, @intToFloat(f32, tile.ySize) * tile.tileSize, 1, xpro.theme.Debug, null);
 
         for(tile.data) |row, y| {
             for(row) |data, x| {
                 if(data == -1) continue;
-                var mat = gk.math.Mat32.identity;
-                var u = @intCast(usize, data);
 
-                var yPos = pos.value.y + @intToFloat(f32, y) * tile.tileSize;
-                mat.translate(pos.value.x + @intToFloat(f32, x) * tile.tileSize, yPos);
-                render.tex(depth.value, mat, tile.texture, tile.sourceLookup[u], yPos);
+                // var u = @intCast(usize, data);
+
+                // var yPos = pos.value.y + @intToFloat(f32, y) * tile.tileSize;
+                // var finalPos = xpro.Vec{.x=pos.value.x + @intToFloat(f32, x) * tile.tileSize, .y=yPos};
+                // render.tex(depth.value, mat, tile.texture, tile.sourceLookup[u], yPos);
             }
 
         }
@@ -187,4 +193,5 @@ pub fn defaultDrawSystems(reg: *ecs.Registry) void {
 pub fn defaultUpdateSystems(reg: *ecs.Registry) void {
     updateAnimation(reg);
     updateGameCamera(reg, .Averaged);
+    updateAttachments(reg);
 }

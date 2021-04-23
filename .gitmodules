@@ -1,6 +1,0 @@
-[submodule "src/deps/gamekit"]
-	path = src/deps/gamekit
-	url = https://github.com/JonSnowbd/zig-gamekit
-[submodule "src/deps/ecs"]
-	path = src/deps/ecs
-	url = https://github.com/JonSnowbd/zig-ecs

@@ -1,7 +1,6 @@
 const std = @import("std");
-const gk = @import("gamekit");
-const ecs = @import("ecs");
 const xpro = @import("../xpro.zig");
+const ecs = @import("ecs");
 
 const cmp = @import("components.zig");
 

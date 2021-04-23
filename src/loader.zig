@@ -1,7 +1,8 @@
 const std = @import("std");
-const gk = @import("gamekit");
+const xpro = @import("xpro.zig");
+const ray = @import("raylib");
 
-const textureHashType = std.StringHashMap(gk.gfx.Texture);
+const textureHashType = std.StringHashMap(xpro.Texture);
 var textureHash: textureHashType = undefined;
 var allocator: *std.mem.Allocator = undefined;
 
@@ -13,13 +14,16 @@ pub fn deinit() void {
     textureHash.deinit();
 }
 
-pub fn texture(path: []const u8) gk.gfx.Texture {
+pub fn texture(path: []const u8) xpro.Texture {
     if(textureHash.contains(path)) {
         var ret = textureHash.get(path);
         return ret.?;
     }
-    var tex = gk.gfx.Texture.initFromFile(allocator, path, gk.renderkit.TextureFilter.nearest) catch unreachable;
+    var tex = xpro.Texture.init(path.ptr);
     textureHash.put(path, tex) catch unreachable;
     std.debug.print("Successfully loaded texture: {s}\n", .{path});
     return tex;
+}
+pub fn textureImgui(path: []const u8) *c_void {
+    return texture(path).forImgui();
 }

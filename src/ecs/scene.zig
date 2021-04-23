@@ -2,7 +2,6 @@ const std = @import("std");
 const ecs = @import("ecs");
 const cmp = @import("components.zig");
 
-
 pub const Container = struct {
     register: ecs.Registry = undefined,
     allocator: *std.mem.Allocator = undefined,

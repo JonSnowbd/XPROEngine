@@ -1,7 +1,14 @@
 const std = @import("std");
-const gk = @import("gamekit");
+const xpro = @import("xpro.zig");
 
-pub fn sweepRect(mover: gk.math.Rect, static:gk.math.Rect, velocity: gk.math.Vec2) f32 {
+/// Given a rectangle that moves, a static rectangle, and the mover's velocity, returns
+/// an f32 that represents how far into the velocity that a collision happens. Useful
+/// for proper collision that is far more accurate than an intersection. If 1.0 is returned,
+/// no collision occured.
+///
+/// Quite a bit more expensive than simple methods of collision detection, but accurate and
+/// avoids popping through thin geometry if used properly.
+pub fn sweepRect(mover: xpro.Rect, static:xpro.Rect, velocity: xpro.Vec) f32 {
     // Calculate sweep through distances:
     var xInvEntry: f32 = undefined;
     var yInvEntry: f32 = undefined;
