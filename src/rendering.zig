@@ -15,6 +15,7 @@ const RenderOrder = struct {
 
     position: xpro.Vec = .{},
     size:     xpro.Vec = .{},
+    origin:   xpro.Vec = .{},
     rotation: f32 = 0,
 
     color: xpro.Color = .{.r=255,.g=255,.b=255,.a=255},
@@ -72,12 +73,12 @@ pub fn flush() void {
             RenderType.Tex => {
                 if(order.texture != null) {
                     var dest = xpro.Rect{
-                        .x = order.position.x,
-                        .y = order.position.y,
+                        .x = order.position.x - (order.size.x * order.origin.x),
+                        .y = order.position.y - (order.size.y * order.origin.y),
                         .width = order.size.x,
                         .height = order.size.y,
                     };
-                    ray.DrawTexturePro(order.texture.?, order.source, dest, xpro.Vec{}, order.rotation, order.color);
+                    ray.DrawTexturePro(order.texture.?, order.source, dest, order.origin, order.rotation, order.color);
                 }
             },
             RenderType.Rect => {
@@ -105,6 +106,19 @@ pub fn tex(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, so
         .source = source,
         .texture = _texture,
         .depth = depth,
+        .y_depth = y_depth
+    }) catch unreachable;
+}
+pub fn texPro(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, source:xpro.Rect, y_depth:?f32, rot: f32, origin: xpro.Vec) void {
+    orders.append(.{
+        .typ = RenderType.Tex,
+        .size= size,
+        .position = pos,
+        .source = source,
+        .texture = _texture,
+        .depth = depth,
+        .origin = origin,
+        .rotation = rot,
         .y_depth = y_depth
     }) catch unreachable;
 }
@@ -141,7 +155,7 @@ pub fn text(depth:f32, message:[]const u8, x:f32, y:f32, y_depth:?f32, font:?*xp
         .font = font
     }) catch unreachable;
 }
-pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col:xpro.Color, y_depth:?f32) void {
+pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, col:xpro.Color, y_depth:?f32) void {
     orders.append(.{
         .typ = RenderType.Circle,
         .position = .{.x=x,.y=y},
@@ -149,7 +163,6 @@ pub fn ellipse(depth:f32, x:f32, y:f32, sizeX:f32, sizeY:f32, thickness:f32, col
         .color = col,
         .depth = depth,
         .y_depth=y_depth,
-        .thickness=thickness
     }) catch unreachable;
 }
 pub fn textFmt(depth:f32, fmt:[]const u8, vars: anytype, x:f32, y:f32, y_depth:?f32, font:?*xpro.Font) void {

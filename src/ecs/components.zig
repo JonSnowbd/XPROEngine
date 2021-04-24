@@ -101,7 +101,7 @@ pub const Sprite = struct {
     /// Origin x+y are both normalized origins between 0 and 1.
     pub fn initOrigin(path: []const u8, x: f32, y: f32) @This() {
         var tex = load.texture(path);
-        return .{ .texture = tex, .source = .{ .x = 0, .y = 0, .w=tex.width, .h=tex.height }, .origin = .{ .x = x, .y = y } };
+        return .{ .texture = tex, .source = .{ .x = 0, .y = 0, .width=@intToFloat(f32,tex.width), .height=@intToFloat(f32,tex.height) }, .origin = .{ .x = x, .y = y } };
     }
     // /// Init with a source rectangle.
     // pub fn initSrc(path: []const u8, x: i32, y: i32, w: i32, h: i32) @This() {

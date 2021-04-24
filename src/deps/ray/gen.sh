@@ -1,0 +1,1 @@
+zig translate-c -I. -lc -target native-native-gnu ./wrapper.c > ./src/raylib_binding.zig

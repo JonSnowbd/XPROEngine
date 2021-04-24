@@ -11,10 +11,11 @@ pub const physics = @import("physics.zig");
 
 pub const components = @import("ecs/components.zig");
 pub const systems = @import("ecs/systems.zig");
+pub const tools = @import("tools/editor.zig");
 
 /// A series of functions used to add components automatically to fulfill
 /// basic system signatures.
-pub const bootstrap = @import("ecs/entities.zig");
+pub const bootstrap = @import("ecs/bootstrap.zig");
 pub const theme = @import("theme.zig");
 
 // Re-exporting types!
@@ -50,33 +51,37 @@ pub fn init(allocator: *std.mem.Allocator) !void {
     mem.initTmpAllocator();
     load.init(allocator);
     try render.init(allocator);
-    
+
+    raylib.SetConfigFlags(@enumToInt(raylib.ConfigFlags.FLAG_WINDOW_RESIZABLE));
+    raylib.InitWindow(1280,720, "XPRO");
+
+    // Set camera state.
     var offX = @intToFloat(f32,raylib.GetScreenWidth()) / 2.0;
     var offY = @intToFloat(f32,raylib.GetScreenHeight()) / 2.0;
-    cam.offset = .{.x=offX,.y=offY};
+    cam.offset.x = offX;
+    cam.offset.y = offY;
     cam.target.x = 0;
     cam.target.y = 0;
+    cam.zoom = 2;
 }
 
 pub fn run(userInitFn: fn() anyerror!void) !void {
-    raylib.InitWindow(1280,720, "XPRO");
-    raylib.SetTargetFPS(144);
+    var monitor_rate = raylib.GetMonitorRefreshRate(raylib.GetCurrentMonitor());
+    raylib.SetTargetFPS(monitor_rate);
+
     img_impl.init();
 
     try userInitFn();
     while(!raylib.WindowShouldClose()) {
         img_impl.newFrame();
+
+        if(debug) tools.runEditor(&currentScene);
         update();
 
         raylib.BeginDrawing();
-        // Center camera:
-
-
-        std.debug.print("{any}\n", .{cam.target});
         raylib.BeginMode2D(cam);
         render.flush();
         raylib.EndMode2D();
-
         img_impl.flush();
         raylib.EndDrawing();
     }
@@ -91,21 +96,21 @@ pub fn deinit() !void {
 }
 
 var lastMousePos: Vec = .{};
-var worldLastMousePos: Vec = .{};
 fn update() void {
     // DT
     dt = raylib.GetFrameTime();
 
     // Input
     mousePos = raylib.GetMousePosition();
-    worldMousePos = raylib.GetScreenToWorld2D(mousePos, cam);
 
-    mouseDelta = .{.x=mousePos.x-lastMousePos.x, .y=mousePos.y-lastMousePos.y};
-    worldMouseDelta = .{.x=worldMousePos.x-worldLastMousePos.x, .y=worldMousePos.y-worldLastMousePos.y};
+    var invMat = raylib.MatrixInvert(raylib.GetCameraMatrix2D(cam));
+    var transpose = raylib.Vector3Transform(.{.x=mousePos.x, .y=mousePos.y}, invMat);
+    worldMousePos = .{.x=transpose.x,.y=transpose.y};
+
+    mouseDelta = mousePos.subv(lastMousePos);
+    worldMouseDelta = mouseDelta.scaleDiv(cam.zoom);
 
     lastMousePos = mousePos;
-    worldLastMousePos = worldMousePos;
-
     currentScene.updateFn(&currentScene);
 }
 

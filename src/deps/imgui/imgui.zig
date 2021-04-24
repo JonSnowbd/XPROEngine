@@ -537,6 +537,7 @@ pub const ImGuiViewport = struct_ImGuiViewport;
 pub const struct_ImVec4 = extern struct {
     pub const white = struct_ImVec4{.x=1,.y=1,.z=1,.w=1};
     pub const black = struct_ImVec4{.x=0,.y=0,.z=0,.w=1};
+    pub const transparent = struct_ImVec4{.x=0,.y=0,.z=0,.w=0};
     x: f32,
     y: f32,
     z: f32,

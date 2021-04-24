@@ -87,10 +87,11 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         const depth = view.getConst(cmp.Depth, ent);
 
         var dest = xpro.Vec{.x=spr.source.width,.y=spr.source.height};
-        render.tex(depth.value, pos.value, spr.texture,dest, spr.source, pos.value.y);
+        render.texPro(depth.value, pos.value, spr.texture,dest, spr.source, pos.value.y, 0.0, spr.origin);
 
         if(xpro.debug){
-            render.rect(depth.value, pos.value.x-1, pos.value.y-1, 2,2, xpro.Color{}, null);
+            render.rect(depth.value+0.001, pos.value.x-1, pos.value.y-1, 2,2, xpro.theme.Info, null);
+            render.rectHollow(depth.value+0.001, pos.value.x - (dest.x * spr.origin.x), pos.value.y - (dest.y * spr.origin.y), dest.x, dest.y, 2.0,xpro.theme.Info, null);
         }
     }
 }
@@ -102,7 +103,7 @@ pub fn drawShadows(reg: *ecs.Registry) void {
         const shad = view.getConst(cmp.Shadow, ent);
         const depth = view.getConst(cmp.Depth, ent);
 
-        render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, 9, xpro.Color{.r=0,.g=0,.b=0,.a=100}, pos.value.y-0.001);
+        render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, xpro.Color{.r=0,.g=0,.b=0,.a=100}, pos.value.y-0.001);
     }
 }
 pub fn drawParticleSystems(reg: *ecs.Registry) void {

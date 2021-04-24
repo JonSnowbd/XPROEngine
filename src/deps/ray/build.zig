@@ -84,7 +84,7 @@ pub fn link(exe: *std.build.LibExeObjStep, comptime rayPkgPath: []const u8) void
 pub fn pkg(comptime rayPkgPath: []const u8) std.build.Pkg {
     return .{
         .name = "raylib",
-        .path = rayPkgPath ++ "src/binding/raylib-zig.zig",
+        .path = rayPkgPath ++ "src/raylib_binding.zig",
     };
 }
 

@@ -3,7 +3,6 @@ const xpro = @import("xpro.zig");
 
 usingnamespace @import("imgui");
 usingnamespace @import("raylib");
-usingnamespace rlgl;
 
 var allocator: *std.mem.Allocator = std.heap.page_allocator;
 var fontTex: Texture2D = undefined;
@@ -22,7 +21,7 @@ fn buildFont() void {
         .width = w,
         .height = h,
         .mipmaps = 1,
-        .format = PixelFormat.UNCOMPRESSED_R8G8B8A8
+        .format = @enumToInt(PixelFormat.PIXELFORMAT_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
     };
     fontTex = Texture2D.initFromImage(fontAtlas);
     io.Fonts.*.TexID = fontTex.forImgui();
@@ -72,10 +71,10 @@ pub fn newFrame() void {
     io.DisplaySize = ImVec2{.x=@intToFloat(f32, GetScreenWidth()), .y=@intToFloat(f32, GetScreenHeight())};
     io.DeltaTime = GetFrameTime();
 
-    io.KeyCtrl = IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) or IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL);
-    io.KeyShift = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) or IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT);
-    io.KeyAlt = IsKeyDown(KeyboardKey.KEY_LEFT_ALT) or IsKeyDown(KeyboardKey.KEY_RIGHT_ALT);
-    io.KeySuper = IsKeyDown(KeyboardKey.KEY_LEFT_SUPER) or IsKeyDown(KeyboardKey.KEY_RIGHT_SUPER);
+    io.KeyCtrl = IsKeyDown(@enumToInt(KeyboardKey.KEY_LEFT_CONTROL)) or IsKeyDown(@enumToInt(KeyboardKey.KEY_RIGHT_CONTROL));
+    io.KeyShift = IsKeyDown(@enumToInt(KeyboardKey.KEY_LEFT_SHIFT)) or IsKeyDown(@enumToInt(KeyboardKey.KEY_RIGHT_SHIFT));
+    io.KeyAlt = IsKeyDown(@enumToInt(KeyboardKey.KEY_LEFT_ALT)) or IsKeyDown(@enumToInt(KeyboardKey.KEY_RIGHT_ALT));
+    io.KeySuper = IsKeyDown(@enumToInt(KeyboardKey.KEY_LEFT_SUPER)) or IsKeyDown(@enumToInt(KeyboardKey.KEY_RIGHT_SUPER));
 
     var mwheel = GetMouseWheelMove();
     if(mwheel > 0.0) {
@@ -85,9 +84,9 @@ pub fn newFrame() void {
     }
 
     io.MousePos = ImVec2{.x=@intToFloat(f32, GetMouseX()),.y=@intToFloat(f32, GetMouseY())};
-    io.MouseDown[ImGuiMouseButton_Left] = IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
-    io.MouseDown[ImGuiMouseButton_Right] = IsMouseButtonDown(MouseButton.MOUSE_RIGHT_BUTTON);
-    io.MouseDown[ImGuiMouseButton_Middle] = IsMouseButtonDown(MouseButton.MOUSE_MIDDLE_BUTTON);
+    io.MouseDown[ImGuiMouseButton_Left] = IsMouseButtonDown(@enumToInt(MouseButton.MOUSE_LEFT_BUTTON));
+    io.MouseDown[ImGuiMouseButton_Right] = IsMouseButtonDown(@enumToInt(MouseButton.MOUSE_RIGHT_BUTTON));
+    io.MouseDown[ImGuiMouseButton_Middle] = IsMouseButtonDown(@enumToInt(MouseButton.MOUSE_MIDDLE_BUTTON));
 
     var cur = igGetMouseCursor();
     if(io.MouseDrawCursor and cur == ImGuiMouseCursor_None) {
@@ -97,11 +96,10 @@ pub fn newFrame() void {
         ShowCursor();
     }
 
+    updateKeys();
     // todo feed character presses
     // var ch = GetCharPressed();
     // while()
-
-    updateKeys();
     igNewFrame();
 }
 
@@ -116,12 +114,12 @@ fn tri(count: usize, indexBuf: [*c]ImDrawIdx, indexVert: [*c]ImDrawVert, texture
     var i: usize = 0;
     while(i <= (count - 3)) : (i += 3) {
         rlPushMatrix();
-        rlBegin(4);
+        rlBegin(RL_TRIANGLES);
         rlSetTexture(textureId);
 
         vert(indexVert[indexBuf[i]]);
-        vert(indexVert[indexBuf[i+1]]);
         vert(indexVert[indexBuf[i+2]]);
+        vert(indexVert[indexBuf[i+1]]);
 
         rlSetTexture(0);
         rlEnd();
@@ -159,9 +157,7 @@ pub fn flush() void {
                 var rH = @floatToInt(c_int, cmd.ClipRect.w - @intToFloat(f32, rY));
 
                 BeginScissorMode(rX,rY,rW,rH);
-
-                var tex: *c_uint = @ptrCast(*c_uint, @alignCast(4,cmd.TextureId.?));
-                tri(cmd.ElemCount, indBuf, vertBuf, tex.*);
+                tri(cmd.ElemCount, indBuf, vertBuf, @intCast(c_uint, @ptrToInt(cmd.TextureId.?)));
             }
             indBuf += cmd.ElemCount;
         }
@@ -175,6 +171,6 @@ fn updateKeys() void {
     var io: *ImGuiIO = igGetIO();
 
     inline for(@typeInfo(KeyboardKey).Enum.fields) |enumField| {
-        io.KeysDown[@intCast(usize, enumField.value)] = IsKeyDown(@intToEnum(KeyboardKey, @intCast(c_int, enumField.value)));
+        io.KeysDown[@intCast(usize, enumField.value)] = IsKeyDown(@intCast(c_int, enumField.value));
     }
 }
