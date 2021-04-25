@@ -44,6 +44,7 @@ pub fn init() void {
     io.KeyMap[ImGuiKey_Escape] = @enumToInt(KeyboardKey.KEY_ESCAPE);
     io.KeyMap[ImGuiKey_Backspace] = @enumToInt(KeyboardKey.KEY_BACKSPACE);
     io.KeyMap[ImGuiKey_End] = @enumToInt(KeyboardKey.KEY_END);
+    io.KeyMap[ImGuiKey_Enter] = @enumToInt(KeyboardKey.KEY_ENTER);
 
     io.KeyMap[ImGuiKey_LeftArrow] = @enumToInt(KeyboardKey.KEY_LEFT);
     io.KeyMap[ImGuiKey_RightArrow] = @enumToInt(KeyboardKey.KEY_RIGHT);
@@ -97,9 +98,13 @@ pub fn newFrame() void {
     }
 
     updateKeys();
-    // todo feed character presses
-    // var ch = GetCharPressed();
-    // while()
+
+    var pop = GetCharPressed();
+    while(pop != 0) {
+        ImGuiIO_AddInputCharacterUTF16(io, @intCast(u8, pop));
+        pop = GetCharPressed();
+    }
+
     igNewFrame();
 }
 

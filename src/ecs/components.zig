@@ -26,7 +26,8 @@ pub const Name = struct {
 };
 /// For debugging, marks an entity as editable in imgui.
 pub const Editable = struct{
-    editor: ?fn(*xpro.scene.Container, *ecs.Registry, ecs.Entity) void = null,
+    pub const fnSignature: type = ?fn(*xpro.scene.Container, *ecs.Registry, ecs.Entity) void;
+    editor: fnSignature = null,
     pub fn init(editFn: ?fn(*xpro.scene.Container, *ecs.Registry, ecs.Entity) void) @This() {
         return .{
             .editor=editFn,

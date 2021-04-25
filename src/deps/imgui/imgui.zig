@@ -522,8 +522,8 @@ pub const ImGuiViewportFlags = c_int;
 pub const struct_ImVec2 = extern struct {
     pub const zero = struct_ImVec2{.x=0,.y=0};
     pub const one = struct_ImVec2{.x=1,.y=1};
-    x: f32,
-    y: f32,
+    x: f32 = 0,
+    y: f32 = 0,
 };
 pub const ImVec2 = struct_ImVec2;
 pub const struct_ImGuiViewport = extern struct {
@@ -538,10 +538,10 @@ pub const struct_ImVec4 = extern struct {
     pub const white = struct_ImVec4{.x=1,.y=1,.z=1,.w=1};
     pub const black = struct_ImVec4{.x=0,.y=0,.z=0,.w=1};
     pub const transparent = struct_ImVec4{.x=0,.y=0,.z=0,.w=0};
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+    w: f32 = 0,
 };
 pub const ImVec4 = struct_ImVec4;
 pub const ImTextureID = ?*c_void;

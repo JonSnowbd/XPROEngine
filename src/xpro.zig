@@ -2,7 +2,7 @@ const std = @import("std");
 const img_impl = @import("cimgui_impl.zig");
 pub const ecs = @import("ecs");
 pub const raylib = @import("raylib");
-pub const imgui = @import("imgui");
+pub const imgui = @import("imgui.zig");
 pub const render = @import("rendering.zig");
 pub const mem = @import("mem.zig");
 pub const scene = @import("ecs/scene.zig");
@@ -11,7 +11,7 @@ pub const physics = @import("physics.zig");
 
 pub const components = @import("ecs/components.zig");
 pub const systems = @import("ecs/systems.zig");
-pub const tools = @import("tools/editor.zig");
+pub const tools = @import("tools.zig");
 
 /// A series of functions used to add components automatically to fulfill
 /// basic system signatures.
@@ -32,13 +32,15 @@ pub const World = ecs.Registry;
 
 /// The amount of time its been since the last render
 pub var dt: f32 = 0.0;
+/// The delta time, unaffected by timescale.
+pub var rawDt: f32 = 0.0;
 /// The position of the mouse on screen. Does not take camera into account.
 pub var mousePos: Vec = .{};
-/// The position of the mouse in world, taking into account camera position and zoom.
+/// The position of the mouse in world, taking into account camera position, rotation, and zoom.
 pub var worldMousePos: Vec = .{};
 /// The delta of the mouse on screen. Does not take the camera into account.
 pub var mouseDelta: Vec = .{};
-/// The delta of the mouse in world, taking into account camera position and zoom.
+/// The delta of the mouse in world, taking into account camera position, rotation, and zoom.
 pub var worldMouseDelta: Vec = .{};
 /// The universal camera used in the game.
 pub var cam: Camera = .{};
@@ -46,10 +48,13 @@ pub var cam: Camera = .{};
 pub var currentScene: scene.Container = undefined;
 /// Whether or not the debug interface is open.
 pub var debug: bool = false;
+/// Multiplier for dt.
+pub var timeScale: f32 = 1.0;
 
 pub fn init(allocator: *std.mem.Allocator) !void {
     mem.initTmpAllocator();
     load.init(allocator);
+    tools.init(allocator);
     try render.init(allocator);
 
     raylib.SetConfigFlags(@enumToInt(raylib.ConfigFlags.FLAG_WINDOW_RESIZABLE));
@@ -63,6 +68,8 @@ pub fn init(allocator: *std.mem.Allocator) !void {
     cam.target.x = 0;
     cam.target.y = 0;
     cam.zoom = 2;
+
+    log("XPro start up complete!");
 }
 
 pub fn run(userInitFn: fn() anyerror!void) !void {
@@ -75,7 +82,9 @@ pub fn run(userInitFn: fn() anyerror!void) !void {
     while(!raylib.WindowShouldClose()) {
         img_impl.newFrame();
 
-        if(debug) tools.runEditor(&currentScene);
+        tools.editor.run();
+        tools.console.run();
+
         update();
 
         raylib.BeginDrawing();
@@ -97,8 +106,10 @@ pub fn deinit() !void {
 
 var lastMousePos: Vec = .{};
 fn update() void {
+    var io = imgui.igGetIO();
     // DT
-    dt = raylib.GetFrameTime();
+    rawDt = raylib.GetFrameTime();
+    dt = rawDt * timeScale;
 
     // Input
     mousePos = raylib.GetMousePosition();
@@ -107,13 +118,43 @@ fn update() void {
     var transpose = raylib.Vector3Transform(.{.x=mousePos.x, .y=mousePos.y}, invMat);
     worldMousePos = .{.x=transpose.x,.y=transpose.y};
 
-    mouseDelta = mousePos.subv(lastMousePos);
-    worldMouseDelta = mouseDelta.scaleDiv(cam.zoom);
+    if(io.*.WantCaptureMouse) {
+        mouseDelta = .{};
+        worldMouseDelta = .{};
+    } else {
+        mouseDelta = mousePos.subv(lastMousePos);
+        worldMouseDelta = mouseDelta.scaleDiv(cam.zoom);
+    }
 
     lastMousePos = mousePos;
     currentScene.updateFn(&currentScene);
 }
 
-pub fn quickFmt(comptime fmt: []const u8, args: anytype) []const u8 {
-    return std.fmt.allocPrint(mem.ringBuffer, fmt, args) catch unreachable;
+pub fn log(message: []const u8) void {
+    tools.console.log.append(message) catch unreachable;
+}
+
+pub fn keyPressed(key: raylib.KeyboardKey) bool {
+    var io = imgui.igGetIO();
+    if(io.*.WantCaptureKeyboard) return false;
+
+    return raylib.IsKeyPressed(@enumToInt(key));
+}
+pub fn keyReleased(key: raylib.KeyboardKey) bool {
+    var io = imgui.igGetIO();
+    if(io.*.WantCaptureKeyboard) return false;
+
+    return raylib.IsKeyReleased(@enumToInt(key));
+}
+pub fn keyDown(key: raylib.KeyboardKey) bool {
+    var io = imgui.igGetIO();
+    if(io.*.WantCaptureKeyboard) return false;
+
+    return raylib.IsKeyDown(@enumToInt(key));
+}
+pub fn keyUp(key: raylib.KeyboardKey) bool {
+    var io = imgui.igGetIO();
+    if(io.*.WantCaptureKeyboard) return false;
+
+    return raylib.IsKeyUp(@enumToInt(key));
 }

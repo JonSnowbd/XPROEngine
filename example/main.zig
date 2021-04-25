@@ -1,7 +1,6 @@
 const std = @import("std");
 const xpro = @import("xpro");
 const raylib = xpro.raylib;
-usingnamespace xpro.imgui;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
@@ -22,8 +21,12 @@ const GameScene = struct {
         if(raylib.IsMouseButtonDown(@enumToInt(raylib.MouseButton.MOUSE_MIDDLE_BUTTON))) {
             xpro.cam.target = xpro.cam.target.subv(xpro.worldMouseDelta);
         }
+
+        if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_GRAVE))) {
+            xpro.tools.console.consoleOpen = !xpro.tools.console.consoleOpen;
+        }
         if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_F1))) {
-            xpro.debug = !xpro.debug;
+            xpro.tools.editor.editorOpen = !xpro.tools.editor.editorOpen;
         }
 
         xpro.systems.defaultUpdateSystems(&scene.register);
