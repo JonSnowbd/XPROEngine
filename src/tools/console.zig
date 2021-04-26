@@ -1,14 +1,18 @@
 const std = @import("std");
 const xpro = @import("../xpro.zig");
-
-pub var consoleOpen: bool = false;
-pub var lines: i32 = 6;
 usingnamespace xpro.imgui;
 
+// Sets whether or not the console will be displayed.
+pub var consoleOpen: bool = false;
+// List of every log text.
 pub var log: std.ArrayList([]const u8) = undefined;
+// The input buffer for the console input text.
 var input: [1024]u8 = undefined;
-
 var allocator: *std.mem.Allocator = undefined;
+
+
+// TODO: Pretty colors and console types, and commands.
+
 
 pub fn init(alloc: *std.mem.Allocator) void {
     allocator = alloc;
@@ -19,17 +23,13 @@ pub fn init(alloc: *std.mem.Allocator) void {
 pub fn run() void {
     if(!consoleOpen) return;
     var style = xpro.imgui.igGetStyle();
-    var linesF = @intToFloat(f32, lines);
-    const totalHeight: f32 = (igGetFontSize()*linesF)+(style.*.ItemSpacing.y*((linesF*2)-2));
     if(igBegin("Console##XPRO_CONSOLE", &consoleOpen, ImGuiWindowFlags_None)) {
 
+        // Calculate remaining space for the child to fill.
         var avail = ImVec2{};
         xpro.imgui.igGetContentRegionAvail(&avail);
-
         avail.y -= style.*.ItemSpacing.y+igGetFontSize()+style.*.WindowPadding.y;
 
-        // Calculate the height to fill the request line count.
-        
         if(igBeginChild_Str("ConsoleInner##XPRO_CONSOLE_INNER_LINES", .{.x=0,.y=avail.y}, true, ImGuiWindowFlags_None)) {
             for(log.items) |message| {
                 igText(message.ptr);
@@ -53,8 +53,4 @@ pub fn run() void {
         
     }
     igEnd();
-}
-
-pub fn add(message: []const u8) void {
-
 }

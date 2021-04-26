@@ -28,6 +28,29 @@ fn buildFont() void {
 
     UnloadImage(fontAtlas);
 }
+fn buildFontExt(filePath: []const u8, size: f32) void {
+    var io: *ImGuiIO = igGetIO();
+
+    _ = ImFontAtlas_AddFontFromFileTTF(io.Fonts, filePath.ptr, size, null, null);
+
+    // init window has to have been called by now.
+    var w: c_int = -1;
+    var h: c_int = -1;
+    var pixels: [*c]u8 = undefined;
+    ImFontAtlas_GetTexDataAsRGBA32(io.Fonts, &pixels, &w, &h, null);
+
+    var fontAtlas: Image = Image{
+        .data = pixels,
+        .width = w,
+        .height = h,
+        .mipmaps = 1,
+        .format = @enumToInt(PixelFormat.PIXELFORMAT_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+    };
+    fontTex = Texture2D.initFromImage(fontAtlas);
+    io.Fonts.*.TexID = fontTex.forImgui();
+
+    UnloadImage(fontAtlas);
+}
 
 pub fn init() void {
     igSetCurrentContext(igCreateContext(null));

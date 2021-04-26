@@ -6,15 +6,15 @@ const xpro = @import("../xpro.zig");//gk
 
 const balance = xpro.balance;
 
-pub fn updateAttachments(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.AttachedTo}, .{});
+pub fn updateAttachments(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Position, cmp.AttachedTo}, .{});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
         var pos = view.get(cmp.Position, ent);
         const attachment = view.getConst(cmp.AttachedTo, ent);
 
-        if(!reg.has(cmp.Position, attachment.parent))
+        if(!world.has(cmp.Position, attachment.parent))
             continue;
 
         const target = view.getConst(cmp.Position, attachment.parent);
@@ -22,8 +22,8 @@ pub fn updateAttachments(reg: *ecs.Registry) void {
         pos.value = target.value.addv(attachment.offset);
     } 
 }
-pub fn updateAnimation(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Sprite, cmp.Animation}, .{cmp.Invisible});
+pub fn updateAnimation(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Sprite, cmp.Animation}, .{cmp.Invisible});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
@@ -48,37 +48,27 @@ pub const GameCameraUpdateStyle = enum {
     Last,
     Averaged
 };
-pub fn updateGameCamera(reg: *ecs.Registry, style: GameCameraUpdateStyle) void {
+pub fn updateGameCamera(world: *xpro.World) void {
     if(xpro.debug)
         return;
     
-    var view = ecs.Registry.view(reg, .{cmp.CameraFocus, cmp.Position}, .{cmp.Invisible});
+    var view = xpro.World.view(world, .{cmp.CameraFocus, cmp.Position}, .{cmp.Invisible});
     var iter = view.iterator();
     if(iter.entities.len == 0) { return; }
 
     var total = xpro.Vec{};
-    var last = xpro.Vec{};
     var count: i32 = 0;
 
     while(iter.next()) |ent| {
         const pos = view.getConst(cmp.Position, ent);
-        if(count == 0 and style == .First) {
-            xpro.cam.target = pos.value;
-            return;
-        }
-        last = pos.value;
         total = total.addv(pos.value);
         count += 1;
     }
-    if(style == .Averaged) {
-        xpro.cam.target = total.scaleDiv(@intToFloat(f32, count));
-    }
-    if(style == .Last) {
-        xpro.cam.target = last;
-    }
+    
+    xpro.cam.target = total.scaleDiv(@intToFloat(f32, count));
 }
-pub fn drawSprites(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.Sprite, cmp.Depth}, .{cmp.Invisible});
+pub fn drawSprites(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Position, cmp.Sprite, cmp.Depth}, .{cmp.Invisible});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
@@ -95,8 +85,8 @@ pub fn drawSprites(reg: *ecs.Registry) void {
         }
     }
 }
-pub fn drawShadows(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.Shadow, cmp.Depth}, .{cmp.Invisible});
+pub fn drawShadows(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Position, cmp.Shadow, cmp.Depth}, .{cmp.Invisible});
     var iter = view.iterator();
     while(iter.next()) |ent| {
         const pos = view.getConst(cmp.Position, ent);
@@ -106,8 +96,8 @@ pub fn drawShadows(reg: *ecs.Registry) void {
         render.ellipse(depth.value, pos.value.x, pos.value.y, shad.size.x, shad.size.y, xpro.Color{.r=0,.g=0,.b=0,.a=100}, pos.value.y-0.001);
     }
 }
-pub fn drawParticleSystems(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.ParticleSystem, cmp.Depth}, .{cmp.Invisible});
+pub fn drawParticleSystems(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Position, cmp.ParticleSystem, cmp.Depth}, .{cmp.Invisible});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
@@ -158,8 +148,8 @@ pub fn drawParticleSystems(reg: *ecs.Registry) void {
         }
     }
 }
-pub fn drawTilemaps(reg: *ecs.Registry) void {
-    var view = ecs.Registry.view(reg, .{cmp.Position, cmp.Tilemap, cmp.Depth}, .{cmp.Invisible});
+pub fn drawTilemaps(world: *xpro.World) void {
+    var view = xpro.World.view(world, .{cmp.Position, cmp.Tilemap, cmp.Depth}, .{cmp.Invisible});
     var iter = view.iterator();
 
     while(iter.next()) |ent| {
@@ -185,14 +175,14 @@ pub fn drawTilemaps(reg: *ecs.Registry) void {
     }
 }
 
-pub fn defaultDrawSystems(reg: *ecs.Registry) void {
-    drawShadows(reg);
-    drawSprites(reg);
-    drawParticleSystems(reg);
-    drawTilemaps(reg);
+pub fn defaultDrawSystems(world: *xpro.World) void {
+    drawShadows(world);
+    drawSprites(world);
+    drawParticleSystems(world);
+    drawTilemaps(world);
 }
-pub fn defaultUpdateSystems(reg: *ecs.Registry) void {
-    updateAnimation(reg);
-    updateGameCamera(reg, .Averaged);
-    updateAttachments(reg);
+pub fn defaultUpdateSystems(world: *xpro.World) void {
+    updateAnimation(world);
+    updateGameCamera(world, .Averaged);
+    updateAttachments(world);
 }

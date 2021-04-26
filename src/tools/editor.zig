@@ -15,7 +15,7 @@ var demoWindowOpen = false;
 
 pub fn run() void {
     if(!editorOpen) return;
-    var scene = &xpro.currentScene;
+    var scene = xpro.currentScene;
     igSetNextWindowPos(ImVec2{.x=4,.y=4}, ImGuiCond_Always, ImVec2.zero);
     igSetNextWindowSize(ImVec2{.x=300, .y=@intToFloat(f32, xpro.raylib.GetScreenHeight()) - 8}, ImGuiCond_Always);
     if(igBegin("Editor", null, editFlags)) {
@@ -62,8 +62,8 @@ pub fn run() void {
 }
 
 fn entityPanel() void {
-    var scene = &xpro.currentScene;
-    var view = xpro.World.view(&scene.register, .{xpro.components.Editable, xpro.components.Name}, .{});
+    var scene = xpro.currentScene;
+    var view = xpro.World.view(&scene.world, .{xpro.components.Editable, xpro.components.Name}, .{});
     var iter = view.iterator();
     if(igBeginChild_Str("EditorEntityList##EEL_XPRO", ImVec2{.x=0, .y=200}, true, ImGuiWindowFlags_None)) {
         while(iter.next()) |ent| {

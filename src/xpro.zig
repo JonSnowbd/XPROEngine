@@ -45,7 +45,7 @@ pub var worldMouseDelta: Vec = .{};
 /// The universal camera used in the game.
 pub var cam: Camera = .{};
 /// The currently playing scene that is updated every frame.
-pub var currentScene: scene.Container = undefined;
+pub var currentScene: *scene.Container = undefined;
 /// Whether or not the debug interface is open.
 pub var debug: bool = false;
 /// Multiplier for dt.
@@ -127,10 +127,13 @@ fn update() void {
     }
 
     lastMousePos = mousePos;
-    currentScene.updateFn(&currentScene);
+    currentScene.updateFn(currentScene);
 }
 
 pub fn log(message: []const u8) void {
+    if(tools.console.log.items.len + 1 >= 100) {
+        _ = tools.console.log.orderedRemove(0);
+    }
     tools.console.log.append(message) catch unreachable;
 }
 

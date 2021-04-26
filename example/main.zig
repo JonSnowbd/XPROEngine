@@ -4,36 +4,6 @@ const raylib = xpro.raylib;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
-const GameScene = struct {
-    scene: xpro.scene.Container,
-
-    fn init(allocator: *std.mem.Allocator) @This() {
-        var scn = xpro.scene.Container.init(allocator, GameScene.update);
-
-        return @This(){
-            .scene = scn,
-        };
-    }
-
-    fn update(scene: *xpro.scene.Container) void {
-        var self: *GameScene = scene.parent(GameScene);
-
-        if(raylib.IsMouseButtonDown(@enumToInt(raylib.MouseButton.MOUSE_MIDDLE_BUTTON))) {
-            xpro.cam.target = xpro.cam.target.subv(xpro.worldMouseDelta);
-        }
-
-        if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_GRAVE))) {
-            xpro.tools.console.consoleOpen = !xpro.tools.console.consoleOpen;
-        }
-        if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_F1))) {
-            xpro.tools.editor.editorOpen = !xpro.tools.editor.editorOpen;
-        }
-
-        xpro.systems.defaultUpdateSystems(&scene.register);
-        xpro.systems.defaultDrawSystems(&scene.register);
-    }
-};
-
 pub fn main() !void {
     try xpro.init(&gpa.allocator);
     try xpro.run(init);
@@ -41,11 +11,28 @@ pub fn main() !void {
 }
 
 fn init() !void {
-    std.debug.print("Welcome to xpro! Creating a few starter entities.\n", .{});
-    xpro.currentScene = GameScene.init(&gpa.allocator).scene;
+    var img = raylib.LoadImage("content/icon.png");
+    img.UseAsWindowIcon();
 
-    
-    var zig = xpro.currentScene.register.create();
-    xpro.bootstrap.sprite(&xpro.currentScene.register, zig, 0, 0, 10, "content/zig.png", 0.5, 0.9);
-    xpro.currentScene.register.add(zig, xpro.components.Shadow.init(100,20));
+    var mainScene = xpro.scene.DefaultGameScene.initHeap(&gpa.allocator);
+    mainScene.addUpdateSystem(controls) catch unreachable;
+    mainScene.addDefaultUpdateSystems() catch unreachable;
+    mainScene.addDefaultRenderSystems() catch unreachable;
+    xpro.currentScene = &mainScene.scene;
+
+    var zig = mainScene.scene.world.create();
+    xpro.bootstrap.sprite(&mainScene.scene.world, zig, 0, 0, 10, "content/zig.png", 0.5, 0.9);
+    mainScene.scene.world.add(zig, xpro.components.Shadow.init(100,20));
+}
+
+fn controls() void {
+    if(raylib.IsMouseButtonDown(@enumToInt(raylib.MouseButton.MOUSE_MIDDLE_BUTTON))) {
+        xpro.cam.target = xpro.cam.target.subv(xpro.worldMouseDelta);
+    }
+    if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_GRAVE))) {
+        xpro.tools.console.consoleOpen = !xpro.tools.console.consoleOpen;
+    }
+    if(raylib.IsKeyPressed(@enumToInt(raylib.KeyboardKey.KEY_F1))) {
+        xpro.tools.editor.editorOpen = !xpro.tools.editor.editorOpen;
+    }
 }
