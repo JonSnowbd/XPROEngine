@@ -28,18 +28,18 @@ pub const Container = struct {
 
 pub const DefaultGameScene = struct {
     // Signatures
-    pub const BasicSystemType:       type = fn() void;
-    pub const ContainerSystemType:   type = fn(*xpro.scene.Container) void;
-    pub const TraditionalSystemType: type = fn(*xpro.World) void;
-    pub const AdvancedSystemType:    type = fn(*DefaultGameScene) void;
+    const BasicSystemType:       type = fn() void;
+    const ContainerSystemType:   type = fn(*xpro.scene.Container) void;
+    const TraditionalSystemType: type = fn(*xpro.World) void;
+    const AdvancedSystemType:    type = fn(*DefaultGameScene) void;
 
-    pub const SignatureTag = enum {
+    const SignatureTag = enum {
         basic,
         container,
         traditional,
         advanced
     };
-    pub const Adapter = union(SignatureTag) {
+    const Adapter = union(SignatureTag) {
         basic: BasicSystemType,
         container: ContainerSystemType,
         traditional: TraditionalSystemType,
@@ -53,6 +53,7 @@ pub const DefaultGameScene = struct {
     updateSystems: std.ArrayList(Adapter) = undefined,
     renderSystems: std.ArrayList(Adapter) = undefined,
 
+    /// Returns a stack allocated game scene. Recommended if you're storing this somewhere yourself.
     pub fn init(alloc:*std.mem.Allocator) @This() {
         return .{
             .allocator = alloc,
@@ -61,6 +62,9 @@ pub const DefaultGameScene = struct {
             .renderSystems = std.ArrayList(Adapter).init(alloc),
         };
     }
+    /// Returns a heap allocated game scene pointer. Recommended for create-and-go scenes you dont have to manage
+    /// yourself. TODO: Register to xpro as a scene to be deinit'd on exit, and allow the ability to "jump" back to (or deinit)
+    /// any heap allocated scenes.
     pub fn initHeap(alloc:*std.mem.Allocator) *@This() {
         var memory: *@This() = alloc.create(@This()) catch unreachable;
         memory.allocator = alloc;
@@ -71,6 +75,11 @@ pub const DefaultGameScene = struct {
         return memory;
     }
 
+    /// **systemFn** must be a function with one of the following signatures:
+    /// `fn() void;`
+    /// `fn(*xpro.scene.Container) void;`
+    /// `fn(*xpro.World) void;`
+    /// `fn(*DefaultGameScene) void;`
     pub fn addUpdateSystem(self: *DefaultGameScene, comptime systemFn: anytype) !void {
         switch(@TypeOf(systemFn)) {
             BasicSystemType       => {try self.updateSystems.append(.{.basic=@as(BasicSystemType,systemFn)});},
@@ -80,6 +89,11 @@ pub const DefaultGameScene = struct {
             else => @compileError("Failed to coerce `systemFn` into any application system function.")
         }
     }
+    /// **systemFn** must be a function with one of the following signatures:
+    /// `fn() void;`
+    /// `fn(*xpro.scene.Container) void;`
+    /// `fn(*xpro.World) void;`
+    /// `fn(*DefaultGameScene) void;`
     pub fn addRenderSystem(self: *DefaultGameScene, comptime systemFn: anytype) !void {
         switch(@TypeOf(systemFn)) {
             BasicSystemType       => {try self.renderSystems.append(.{.basic=@as(BasicSystemType,systemFn)});},
@@ -90,17 +104,22 @@ pub const DefaultGameScene = struct {
         }
     }
 
+    /// Adds the default update systems, allowing sprite animation, attached entities, and game camera logic.
     pub fn addDefaultUpdateSystems(self: *DefaultGameScene) !void {
         try self.addUpdateSystem(xpro.systems.updateAnimation);
         try self.addUpdateSystem(xpro.systems.updateAttachments);
         try self.addUpdateSystem(xpro.systems.updateGameCamera);
     }
+    /// Adds the default render systems, allowing the drawing of tilemaps, shadow, sprites, and particles.
     pub fn addDefaultRenderSystems(self: *DefaultGameScene) !void {
         try self.addRenderSystem(xpro.systems.drawTilemaps);
         try self.addRenderSystem(xpro.systems.drawShadows);
         try self.addRenderSystem(xpro.systems.drawSprites);
         try self.addRenderSystem(xpro.systems.drawParticleSystems);
     }
+
+    // TODO: Remove/Disable/Enable systems by function pointer.
+    // TODO: Debug version of update that times each system for profiling.
 
     pub fn update(scene: *Container) void {
         var self: *@This() = scene.parent(@This());
