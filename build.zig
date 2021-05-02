@@ -56,7 +56,7 @@ pub fn link(b: *std.build.Builder, exe: *std.build.LibExeObjStep, target: std.bu
         .dependencies = &.{
             rayPkg,
             imPkg,
-            ecsPkg
+            ecsPkg,
         }
     });
 }
