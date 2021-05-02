@@ -22,7 +22,11 @@ pub fn run() void {
 
         if(igBeginMenuBar()) {
             if(igBeginMenu("File", true)) {
-                _ = igMenuItem_Bool("Save (WIP)", null, false, true);
+                if(igMenuItem_Bool("Save", null, false, true)) {
+                    var bytes = xpro.serialization.serialize(std.heap.page_allocator, &scene.world);
+                    std.debug.print("{any}\n", .{bytes});
+                    std.fs.cwd().writeFile("tutorial.bytes", bytes) catch unreachable;
+                }
                 _ = igMenuItem_Bool("Load (WIP)", null, false, true);
                 if(igMenuItem_Bool("Close", null, false, true)) {
                     xpro.debug = false;
