@@ -7,7 +7,9 @@ const img_build = @import("src/deps/imgui/build.zig");
 pub const addGameContent = ray_build.addGameContent; // Re-export addGameContent
 
 pub fn build(b: *std.build.Builder) void {
-    const target = b.standardTargetOptions(.{});
+    const target = b.standardTargetOptions(.{
+        .default_target = .{ .abi = std.Target.Abi.gnu },
+    });
     const mode = b.standardReleaseOptions();
     
     // Example content
@@ -20,25 +22,29 @@ pub fn build(b: *std.build.Builder) void {
 
     // Tests
     const testing = b.addTest("src/tests.zig");
-    link(b, testing, target, "./") catch unreachable;
     testing.setTarget(target);
     testing.setBuildMode(mode);
+    link(b, testing, target, "") catch unreachable;
     const test_step = b.step("test", "Runs all of xpro's test cases.");
     test_step.dependOn(&testing.step);
+
+    // run
+    const run_cmd = exe.run();
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&run_cmd.step);
 }
 pub fn link(b: *std.build.Builder, exe: *std.build.LibExeObjStep, target: std.build.Target, comptime prefixPath: []const u8) !void {
     // ECS
     ecs_build.linkArtifact(b, exe, target, .static, prefixPath++"src/deps/ecs/");
-
     // Raylib
     ray_build.link(exe, prefixPath++"src/deps/ray/");
-
+    // Imgui
     img_build.link(b, exe, target, prefixPath++"src/deps/imgui/");
-
-    // var forwarded_deps: std.ArrayList(std.build.Pkg) = std.ArrayList(std.build.Pkg).init(b.allocator);
-    // for (exe.packages.items) |package| {
-    //     forwarded_deps.append(package) catch unreachable;
-    // }
 
     var rayPkg = ray_build.pkg(prefixPath++"src/deps/ray/");
     var imPkg = img_build.pkg(prefixPath++"src/deps/imgui/");
@@ -53,7 +59,4 @@ pub fn link(b: *std.build.Builder, exe: *std.build.LibExeObjStep, target: std.bu
             ecsPkg
         }
     });
-    // exe.addPackage(imPkg);
-    // exe.addPackage(ecsPkg);
-    // exe.addPackage(rayPkg);
 }
