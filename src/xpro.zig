@@ -1,5 +1,6 @@
 const std = @import("std");
 const img_impl = @import("cimgui_impl.zig");
+pub const folders = @import("deps/known-folders/known-folders.zig");
 pub const ecs = @import("ecs");
 pub const raylib = @import("raylib");
 pub const imgui = @import("imgui.zig");
@@ -8,6 +9,7 @@ pub const mem = @import("mem.zig");
 pub const scene = @import("ecs/scene.zig");
 pub const load = @import("loader.zig");
 pub const physics = @import("physics.zig");
+pub const serialization = @import("tools/serialization.zig");
 
 pub const components = @import("ecs/components.zig");
 pub const systems = @import("ecs/systems.zig");
@@ -18,7 +20,7 @@ pub const tools = @import("tools.zig");
 pub const bootstrap = @import("ecs/bootstrap.zig");
 pub const theme = @import("theme.zig");
 
-// Re-exporting types!
+// Re-exporting types! Make it feel more like a centralized library.
 pub const Vec = raylib.Vector2;
 pub const Rect = raylib.Rectangle;
 pub const Color = raylib.Color;
@@ -26,6 +28,8 @@ pub const Texture = raylib.Texture2D;
 pub const Camera = raylib.Camera2D;
 pub const Shader = raylib.Shader;
 pub const Font = raylib.SpriteFont;
+pub const Keys = raylib.KeyboardKey;
+pub const Mouse = raylib.MouseButton;
 
 pub const Entity = ecs.Entity;
 pub const World = ecs.Registry;
@@ -56,6 +60,7 @@ pub fn init(allocator: *std.mem.Allocator) !void {
     load.init(allocator);
     tools.init(allocator);
     try render.init(allocator);
+    serialization.init(allocator);
 
     raylib.SetConfigFlags(@enumToInt(raylib.ConfigFlags.FLAG_WINDOW_RESIZABLE));
     raylib.InitWindow(1280,720, "XPRO");
@@ -131,33 +136,41 @@ fn update() void {
 }
 
 pub fn log(message: []const u8) void {
-    if(tools.console.log.items.len + 1 >= 100) {
+    if(tools.console.log.items.len + 1 >= 100) { // TODO: Swap to a FIFO structure for log, then up the limit.
         _ = tools.console.log.orderedRemove(0);
     }
     tools.console.log.append(message) catch unreachable;
 }
 
-pub fn keyPressed(key: raylib.KeyboardKey) bool {
+pub fn keyPressed(key: Keys) bool {
     var io = imgui.igGetIO();
     if(io.*.WantCaptureKeyboard) return false;
 
     return raylib.IsKeyPressed(@enumToInt(key));
 }
-pub fn keyReleased(key: raylib.KeyboardKey) bool {
+pub fn keyReleased(key: Keys) bool {
     var io = imgui.igGetIO();
     if(io.*.WantCaptureKeyboard) return false;
 
     return raylib.IsKeyReleased(@enumToInt(key));
 }
-pub fn keyDown(key: raylib.KeyboardKey) bool {
+pub fn keyDown(key: Keys) bool {
     var io = imgui.igGetIO();
     if(io.*.WantCaptureKeyboard) return false;
 
     return raylib.IsKeyDown(@enumToInt(key));
 }
-pub fn keyUp(key: raylib.KeyboardKey) bool {
+pub fn keyUp(key: Keys) bool {
     var io = imgui.igGetIO();
     if(io.*.WantCaptureKeyboard) return false;
 
     return raylib.IsKeyUp(@enumToInt(key));
+}
+
+pub fn loadUser(allocator: *std.mem.Allocator, userConfig: anytype) !void {
+
+}
+pub fn saveUser(allocator: *std.mem.Allocator, userConfig: anytype) !void {
+    var bytes = std.ArrayList(u8).init(allocator);
+    std.json.stringify(userConfig, .{}, bytes.writer());
 }

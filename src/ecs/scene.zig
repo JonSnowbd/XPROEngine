@@ -141,4 +141,18 @@ pub const DefaultGameScene = struct {
             }
         }
     }
+
+    const entWrapper = struct {
+        const component = struct {
+            
+        };
+        name: []const u8,
+        components: []const component,
+    };
+    pub fn save(comptime path: []const u8) void {
+        const ds = xpro.serialization.deserializer(std.builtin.Endian.Big, xpro.serialization.Packing.Byte, entWrapper);
+    }
+    pub fn load(comptime path: []const u8) void {
+
+    }
 };

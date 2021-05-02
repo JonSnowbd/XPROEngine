@@ -105,7 +105,7 @@ const fs = std.fs;
 pub fn addGameContent(comptime baseContentPath: []const u8) AddContentErrors!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
-    const zigBin: []const u8 = path.join(&gpa.allocator, &[_][]const u8{"zig-cache","bin"}) catch return error.FolderError;
+    const zigBin: []const u8 = path.join(&gpa.allocator, &[_][]const u8{"zig-out","bin"}) catch return error.FolderError;
     defer gpa.allocator.free(zigBin);
     fs.cwd().makePath(zigBin) catch return error.FolderError;
 
@@ -158,16 +158,18 @@ fn copy(allocator: *std.mem.Allocator, from: []const u8, to: []const u8, filenam
             std.debug.print("COPY: {s}/{s} to {s}/{s}\n", .{from, filename, to, filename});
         return;
     };
-    defer dfile.close();
     
     var sstat = sfile.stat() catch return error.FileError;
     var dstat = dfile.stat() catch return error.FileError;
 
     if(sstat.mtime > dstat.mtime) {
+        dfile.close();
+        dest.deleteFile(filename) catch return error.PermissionError;
         source.copyFile(filename, dest, filename, .{}) catch return error.PermissionError;
         if(verbose)
             std.debug.print("OVERWRITE: {s}\\{s} to {s}\\{s}\n", .{from, filename, to, filename});
     } else {
+        defer dfile.close();
         std.debug.print("SKIP: {s}\\{s}\n", .{from, filename});
     }
 
