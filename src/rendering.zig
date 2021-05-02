@@ -109,7 +109,7 @@ pub fn tex(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, so
         .y_depth = y_depth
     }) catch unreachable;
 }
-pub fn texPro(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, source:xpro.Rect, y_depth:?f32, rot: f32, origin: xpro.Vec) void {
+pub fn texPro(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec, source:xpro.Rect, y_depth:?f32, rot: f32, origin: xpro.Vec, color: xpro.Color) void {
     orders.append(.{
         .typ = RenderType.Tex,
         .size= size,
@@ -119,7 +119,8 @@ pub fn texPro(depth:f32, pos: xpro.Vec, _texture: ?xpro.Texture, size: xpro.Vec,
         .depth = depth,
         .origin = origin,
         .rotation = rot,
-        .y_depth = y_depth
+        .y_depth = y_depth,
+        .color = color,
     }) catch unreachable;
 }
 pub fn rect(depth:f32, x:f32, y:f32, w:f32, h:f32, col:xpro.Color, y_depth:?f32) void {

@@ -2,7 +2,7 @@ const std = @import("std");
 const ecs = @import("ecs");
 const cmp = @import("components.zig");
 const render = @import("../rendering.zig");
-const xpro = @import("../xpro.zig");//gk
+const xpro = @import("../xpro.zig");
 
 const balance = xpro.balance;
 
@@ -77,7 +77,7 @@ pub fn drawSprites(world: *xpro.World) void {
         const depth = view.getConst(cmp.Depth, ent);
 
         var dest = xpro.Vec{.x=spr.source.width,.y=spr.source.height};
-        render.texPro(depth.value, pos.value, spr.texture,dest, spr.source, pos.value.y, 0.0, spr.origin);
+        render.texPro(depth.value, pos.value, xpro.load.texture(spr.texture), dest, spr.source, pos.value.y, 0.0, spr.origin, spr.color);
 
         if(xpro.debug){
             render.rect(depth.value+0.001, pos.value.x-1, pos.value.y-1, 2,2, xpro.theme.Info, null);
@@ -163,12 +163,11 @@ pub fn drawTilemaps(world: *xpro.World) void {
         for(tile.data) |row, y| {
             for(row) |data, x| {
                 if(data == -1) continue;
+                var u = @intCast(usize, data);
 
-                // var u = @intCast(usize, data);
-
-                // var yPos = pos.value.y + @intToFloat(f32, y) * tile.tileSize;
-                // var finalPos = xpro.Vec{.x=pos.value.x + @intToFloat(f32, x) * tile.tileSize, .y=yPos};
-                // render.tex(depth.value, mat, tile.texture, tile.sourceLookup[u], yPos);
+                var yPos = pos.value.y + @intToFloat(f32, y) * tile.tileSize;
+                var finalPos = xpro.Vec{.x=pos.value.x + @intToFloat(f32, x) * tile.tileSize, .y=yPos};
+                render.tex(depth.value, finalPos, xpro.load.texture(tile.texture), .{.x=tile.tileSize,.y=tile.tileSize},tile.sourceLookup[u], yPos);
             }
 
         }
