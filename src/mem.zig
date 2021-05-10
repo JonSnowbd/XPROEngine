@@ -3,7 +3,7 @@ const mem = std.mem;
 
 // Credit to prime31's various zig projects, very useful allocator
 
-pub const ScratchAllocator = struct {
+const ScratchAllocator = struct {
     allocator: mem.Allocator,
     backup_allocator: *mem.Allocator,
     end_index: usize,
@@ -17,7 +17,7 @@ pub const ScratchAllocator = struct {
                 .allocFn = alloc,
                 .resizeFn = mem.Allocator.noResize,
             },
-            .backup_allocator = allocator,
+            .backup_allocator = a,
             .buffer = scratch_buffer,
             .end_index = 0,
         };
@@ -52,10 +52,8 @@ pub const ScratchAllocator = struct {
 pub var ringBuffer: *mem.Allocator = undefined;
 var _allocInstance: ScratchAllocator = undefined;
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-pub const allocator = &gpa.allocator;
 
-pub fn initTmpAllocator() void {
+pub fn initTmpAllocator(allocator: *std.mem.Allocator) void {
     _allocInstance = ScratchAllocator.init(allocator);
     ringBuffer = &_allocInstance.allocator;
 }

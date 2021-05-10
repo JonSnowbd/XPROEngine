@@ -1,6 +1,8 @@
 zig-out/
+zig-cache/
 /release/
 /debug/
 /build/
 /build-*/
 /docgen_tmp/
+imgui.ini

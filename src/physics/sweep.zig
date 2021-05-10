@@ -8,7 +8,7 @@ const xpro = @import("../xpro.zig");
 ///
 /// Quite a bit more expensive than simple methods of collision detection, but accurate and
 /// avoids popping through thin geometry if used properly.
-pub fn sweepRect(mover: xpro.Rect, static:xpro.Rect, velocity: xpro.Vec) f32 {
+pub fn sweepRect(mover: xpro.Rect, static: xpro.Rect, velocity: xpro.Vec) f32 {
     // Calculate sweep through distances:
     var xInvEntry: f32 = undefined;
     var yInvEntry: f32 = undefined;

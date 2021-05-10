@@ -56,6 +56,8 @@ pub fn init() void {
     igSetCurrentContext(igCreateContext(null));
     var io: *ImGuiIO = igGetIO();
 
+    io.IniFilename = (std.fs.path.join(allocator, &[_][]const u8{ xpro.basePath, "imgui.ini" }) catch unreachable).ptr;
+
     buildFont();
 
     rlEnableScissorTest();

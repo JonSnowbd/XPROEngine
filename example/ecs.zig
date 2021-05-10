@@ -16,8 +16,12 @@ pub fn ghostController(world: *xpro.World) void {
     while(iter.next()) |ent| {
     }
 }
+
+var editorOpen = true;
+var consoleOpen = true;
 pub fn debugControls() void {
-    if(xpro.raylib.IsKeyPressed(@enumToInt(xpro.Keys.KEY_F1))) {
-        xpro.tools.editor.editorOpen = !xpro.tools.editor.editorOpen;
+    if(xpro.raylib.IsKeyPressed(@enumToInt(xpro.Keys.KEY_GRAVE))) {
+        xpro.debug = !xpro.debug;
     }
+    xpro.tools.run("content/tutorial.world", xpro.currentScene);
 }

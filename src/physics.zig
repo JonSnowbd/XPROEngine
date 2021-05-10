@@ -1,1 +1,0 @@
-pub const sweep = @import("physics/sweep.zig");

@@ -3,6 +3,8 @@ const xpro = @import("../xpro.zig");
 const ecs = @import("ecs");
 const load = xpro.load;
 
+usingnamespace xpro.imgui;
+
 pub const SpatialHashSingleton = struct {
     pub const Presence = struct {
         x: usize,
@@ -28,12 +30,34 @@ pub const Serializable = struct {};
 pub const Disabled = struct {};
 /// For debugging, marks an entity as editable in imgui.
 pub const Editable = struct{
-    pub const fnSignature: type = ?fn(*xpro.scene.Container, *ecs.Registry, ecs.Entity) void;
-    editor: fnSignature = null,
-    pub fn init(editFn: ?fn(*xpro.scene.Container, *ecs.Registry, ecs.Entity) void) @This() {
+    pub const fnSignature: type = fn(*ecs.Registry, ecs.Entity) void;
+    editor: fnSignature = defaultEditor,
+    pub fn init(editFn: fnSignature) @This() {
         return .{
             .editor=editFn,
         };
+    }
+    pub fn defaultEditor(world: *xpro.World, ent: ecs.Entity) void {
+        if(world.has(Name, ent)) {
+            igFmtText("> Editing {s}", .{world.getConst(Name, ent).value});
+        }
+        if(world.has(Position, ent)) {
+            igText("Position Component");
+            igXProVector("Position", &world.get(Position, ent).value);
+        }
+        if(world.has(Depth, ent)) {
+            igText("Depth Component");
+            _ = igInputFloat("Depth", &world.get(Depth,ent).value, 0.25, 0.5, "%.2f", ImGuiInputTextFlags_None);
+        }
+        if(world.has(Sprite, ent)) {
+            igText("Sprite Component");
+            var spr: *Sprite = world.get(Sprite, ent);
+            igFmtText("{s}", .{spr.texture});
+            igXProColor("Color", &spr.color);
+            igXProVector("Origin", &spr.origin);
+            _ = xpro.imgui.igCheckbox("Horizontal Mirror", &spr.hFlip);
+            _ = xpro.imgui.igCheckbox("Vertical Mirror", &spr.vFlip);
+        }
     }
 };
 pub const AttachedTo = struct {

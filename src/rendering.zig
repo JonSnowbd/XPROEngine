@@ -52,7 +52,7 @@ pub fn init(allocator:*std.mem.Allocator) !void {
 }
 /// You do not need to call this unless you are using the rendering standalone, as
 /// `(xpro.zig).deinit()` will call this for you.
-pub fn deinit() !void {
+pub fn deinit() void {
     orders.deinit();
 }
 
@@ -78,6 +78,7 @@ pub fn flush() void {
                         .width = order.size.x,
                         .height = order.size.y,
                     };
+
                     ray.DrawTexturePro(order.texture.?, order.source, dest, order.origin, order.rotation, order.color);
                 }
             },

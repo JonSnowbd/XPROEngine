@@ -10,74 +10,44 @@ fn log(comptime fmt: []const u8, args: anytype) void {
     }
 }
 
-/// A list of information that determines how a struct will be serialized/deserialized,
-/// like fields to skip.
-/// TODO: Implement a HashSet for O(1) lookup without using a HashMap
-pub const SerializationOption = struct {
-    /// A list of the hashes of the names of the fields to be skipped
-    /// from the struct.
-    skip: []const u32 = undefined,
+const SerInfo = struct{
+    serialize: fn(*SerInfo, *xpro.binarySerializer.BinaryStream, *xpro.World, xpro.Entity) void,
+    deserialize: fn(*SerInfo, *xpro.binarySerializer.BinaryStream, *xpro.World, xpro.Entity) void,
+    canSerialize: fn(*SerInfo, *xpro.World, xpro.Entity) bool,
 
-    pub fn init(comptime skips: [][]const u8) SerializationOption {
-        return SerializationOption{
-            .skip = comptime blk: {
-                var x: []const u32 = .{};
-                for(skips) |string| {
-                    x = x ++ []u32{std.hash.Adler32.hash(string)};
-                }
-                break :blk x;
-            }
-        };
-    }
-
-    pub fn isSkipped(self: *SerializationOption, name: []const u8) bool {
-        var hash = std.hash.Adler32.hash(name);
-        for(skip) |val| {
-            if(val == hash) return true;
-        }
-        return false;
-    }
-};
-const SerializationPair = struct{
-    options: ?SerializationOption = null,
-    serialize: fn(*SerializationPair, *std.ArrayList(u8), *xpro.World, xpro.Entity) void,
-    deserialize: fn(*SerializationPair, *std.ArrayList(u8), usize, *xpro.World, xpro.Entity) usize,
-    canSerialize: fn(*SerializationPair, *xpro.World, xpro.Entity) bool,
-
-    pub fn parent(self: *SerializationPair, comptime T: type) *T {
+    pub fn parent(self: *SerInfo, comptime T: type) *T {
         return @fieldParentPtr(T, "pair", self);
     }
 };
-var serializers: std.ArrayList(SerializationPair) = undefined;
+var serializers: std.ArrayList(SerInfo) = undefined;
 fn SerializationWrapper(comptime T: type) type {
     return struct {
-        pair: SerializationPair,
+        pair: SerInfo,
         pub fn init() @This() {
             return .{
                 .pair = .{.serialize = @This()._serialize, .deserialize = @This()._deserialize, .canSerialize = @This()._canSerialize},
             };
         }
-        pub fn _serialize(self: *SerializationPair, bytes: *std.ArrayList(u8), world: *xpro.World, ent: xpro.Entity) void {
+        pub fn _serialize(self: *SerInfo, stream: *xpro.binarySerializer.BinaryStream, world: *xpro.World, ent: xpro.Entity) void {
             var this: *@This() = self.parent(@This());
             const value: *T = world.get(T, ent);
-            insertMemory(bytes, value) catch unreachable;
+            stream.write(value);
         }
-        pub fn _deserialize(self: *SerializationPair, bytes: *std.ArrayList(u8), start: usize, world: *xpro.World, ent: xpro.Entity) usize {
+        pub fn _deserialize(self: *SerInfo, stream: *xpro.binarySerializer.BinaryStream, world: *xpro.World, ent: xpro.Entity) void {
             var this: *@This() = self.parent(@This());
             var value = T{};
-            var new = retrieveMemory(bytes, start, &value) catch unreachable;
-            log("  - Added: {any}\n", .{value});
+            stream.read(&value);
             world.add(ent, value);
-            return new;
+            log("  - Added: {any}\n", .{value});
         }
-        pub fn _canSerialize(self: *SerializationPair, world: *xpro.World, ent: xpro.Entity) bool {
+        pub fn _canSerialize(self: *SerInfo, world: *xpro.World, ent: xpro.Entity) bool {
             return world.has(T, ent);
         }
     };
 }
 
 pub fn init(allocator: *std.mem.Allocator) void {
-    serializers = std.ArrayList(SerializationPair).init(allocator);
+    serializers = std.ArrayList(SerInfo).init(allocator);
 }
 
 // and this registers them into serializers.
@@ -85,16 +55,9 @@ pub fn register(comptime T: type) void {
     if(@sizeOf(T) == 0) { @compileError("Null sized components are a no go in registerSerializable."); }
     serializers.append(SerializationWrapper(T).init().pair) catch unreachable;
 }
-pub fn registerEx(comptime T: type, opts: SerializationOption) void {
-    if(@sizeOf(T) == 0) { @compileError("Null sized components are a no go in registerSerializable."); }
-    var wrapper = SerializationWrapper(T).init();
-    wrapper.pair.options = opts;
-    serializers.append(wrapper.pair) catch unreachable;
-}
 
-pub fn serialize(allocator: *std.mem.Allocator, world: *xpro.World) []const u8 {
-    var bytes = std.ArrayList(u8).init(allocator);
-    defer bytes.deinit();
+pub fn serialize(allocator: *std.mem.Allocator, world: *xpro.World) xpro.binarySerializer.BinaryStream {
+    var stream = xpro.binarySerializer.BinaryStream.init(allocator);
 
     var view = world.view(.{xpro.components.Serializable}, .{xpro.components.Disabled});
     var iter = view.iterator();
@@ -102,138 +65,41 @@ pub fn serialize(allocator: *std.mem.Allocator, world: *xpro.World) []const u8 {
     while(iter.next()) |ent| {
         log("> Serializing Entity#{any}\n", .{ent});
         for(serializers.items) |*ser,  i| {
-            const castSet: *SerializationPair = ser;
+            const castSet: *SerInfo = ser;
             if(castSet.canSerialize(castSet, world, ent)) {
                 log("  - Registered a component under Serializer#{any}\n", .{i});
-                insertMemory(&bytes,&(i+1)) catch unreachable;
-                castSet.serialize(castSet, &bytes, world, ent);
+
+                var target:usize = i+1;
+                stream.write(&target);
+                castSet.serialize(castSet, &stream, world, ent);
             }
         }
         const nullterm: usize = 0;
-        insertMemory(&bytes, &nullterm) catch unreachable;
+        stream.write(&nullterm);
         log("  - End\n", .{});
     }
 
-    return allocator.dupe(u8, bytes.items) catch unreachable;
+    return stream;
 }
-pub fn deserialize(allocator: *std.mem.Allocator, bytes: *std.ArrayList(u8), world: *xpro.World) void {
-    var index:usize = 0;
-    while(index < bytes.items.len) {
+pub fn deserialize(allocator: *std.mem.Allocator, stream: *xpro.binarySerializer.BinaryStream, world: *xpro.World) void {
+    while(!stream.done()) {
         var ent = world.create();
         world.add(ent, xpro.components.Serializable{});
         log("> Recreating entity as Entity#{any}\n", .{ent});
         var going = true;
         while(going) {
             var pairIndex: usize = 0;
-            index = retrieveMemory(bytes, index, &pairIndex) catch unreachable;
+            stream.read(&pairIndex);
             if(pairIndex == 0) {
                 going = false;
                 log("  - End\n", .{});
                 break;
             } else {
                 log("  - Reconstructing from index#{any}\n", .{pairIndex});
-                var pair: *SerializationPair = &serializers.items[pairIndex-1];
-                index = pair.deserialize(pair, bytes, index, world, ent);
+                var pair: *SerInfo = &serializers.items[pairIndex-1];
+                pair.deserialize(pair, stream, world, ent);
             }
         }
 
     }
-}
-
-fn insertMemory(bytes: *std.ArrayList(u8), ptr: anytype) !void {
-    const T = @TypeOf(ptr.*);
-
-    switch(@typeInfo(T)) {
-        .Struct => {
-            var in_bytes = std.mem.asBytes(ptr);
-            inline for(std.meta.fields(T)) |field| {
-                const fieldCast: std.builtin.TypeInfo.StructField = field;
-                switch(@typeInfo(fieldCast.field_type)) {
-                    // For arrays we serialize in first the length of the array for the deserializer to
-                    // know how big to make the slice.
-                    .Array => {
-                        var indexSize = @intCast(usize,@sizeOf(usize));
-                        try insertMemorySmall(bytes, &indexSize);
-                        var arrayBytes = std.mem.asBytes(&@field(ptr.*, fieldCast.name));
-                        var i: usize = 0;
-                        while(i < arrayBytes.len) {
-                            try bytes.append(arrayBytes[i]);
-                            i+=1;
-                        }
-                    },
-                    // Re-assigning a memory pointer isnt something I want to attempt.
-                    .Pointer => { continue; log("  - WARNING: Pointer types are not serialized, consider skipping {s}", .{fieldCast.name}); },
-                    // Otherwise its a simple insert.
-                    else => {
-                        var offset = @intCast(usize, @byteOffsetOf(T, fieldCast.name));
-                        var length = @intCast(usize, @sizeOf(fieldCast.field_type));
-
-                        var i = offset;
-                        while(i < offset+length) {
-                            try bytes.append(in_bytes[i]);
-                            i+=1;
-                        }
-                    }
-                }
-            }
-        },
-        else => {
-            // Simple component types don't need anything complex.
-            try insertMemorySmall(bytes, ptr);
-        }
-    }
-}
-fn insertMemorySmall(bytes: *std.ArrayList(u8), ptr: anytype) !void {
-    const T = @TypeOf(ptr.*);
-    var in_bytes = std.mem.asBytes(ptr);
-    var length = @intCast(usize, @sizeOf(T));
-    var i: usize = 0;
-    while(i < length) {
-        try bytes.append(in_bytes[i]);
-        i+=1;
-    }
-}
-/// Returns the index it left off at.
-fn retrieveMemory(bytes: *std.ArrayList(u8), startIndex: usize, ptr: anytype) !usize {
-    const T = @TypeOf(ptr.*);
-    switch(@typeInfo(T)) {
-        .Struct => {
-            var byteIndex: usize = startIndex;
-            inline for(std.meta.fields(T)) |field| {
-                const fieldCast: std.builtin.TypeInfo.StructField = field;
-                switch(@typeInfo(fieldCast.field_type)) {
-                    .Array => |arrInfo| {
-                        // extract the serialized count
-                        var arrayLen: usize = 0;
-                        byteIndex = startIndex + try retrieveMemorySmall(bytes, startIndex, &arrayLen);
-
-                        // Then get the bits out!
-                        var typeSize: usize = @intCast(usize,@sizeOf(arrInfo.child)) * arrayLen;
-                        var slice = bytes[byteIndex..byteIndex+typeSize];
-                        @field(ptr.*, fieldCast.name) = @ptrCast([]const arrInfo.child, @alignCast(@alignOf(arrInfo.child),slice.ptr));
-                    },
-                    .Pointer => { continue; log("  - WARNING: Pointer types are not serialized, consider skipping {s}", .{fieldCast.name}); },
-                    else => {
-                        byteIndex += try (retrieveMemorySmall(bytes, byteIndex, &@field(ptr.*, fieldCast.name)));
-                    }
-                }
-            }
-            return byteIndex;
-        },
-        else => {
-            var newIndex = startIndex + try retrieveMemorySmall(bytes, startIndex, ptr);
-            return newIndex;
-        }
-    }
-
-
-}
-/// Returns how many bytes it *moved forward*, not the byte index it moved *to*
-fn retrieveMemorySmall(bytes: *std.ArrayList(u8), startIndex: usize, ptr: anytype) !usize {
-    const T = @TypeOf(ptr.*);
-    var size = @intCast(usize, @sizeOf(T));
-    var slice = bytes.items[startIndex..startIndex+size];
-    var cast: *align(1) T = @ptrCast(*align(1) T, slice.ptr);
-    ptr.* = cast.*;
-    return size;
 }

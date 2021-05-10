@@ -2,6 +2,8 @@ const std = @import("std");
 const xpro = @import("../xpro.zig");
 const ecs = @import("ecs");
 
+usingnamespace xpro.imgui;
+
 pub const Container = struct {
     world: xpro.World = undefined,
     allocator: *std.mem.Allocator = undefined,
@@ -53,6 +55,9 @@ pub const DefaultGameScene = struct {
     updateSystems: std.ArrayList(Adapter) = undefined,
     renderSystems: std.ArrayList(Adapter) = undefined,
 
+    debugTimes: std.AutoHashMap(usize, u64) = undefined,
+    debugNames: std.AutoHashMap(usize, []const u8) = undefined,
+
     /// Returns a stack allocated game scene. Recommended if you're storing this somewhere yourself.
     pub fn init(alloc:*std.mem.Allocator) @This() {
         return .{
@@ -60,6 +65,8 @@ pub const DefaultGameScene = struct {
             .scene = Container.init(alloc, DefaultGameScene.update),
             .updateSystems = std.ArrayList(Adapter).init(alloc),
             .renderSystems = std.ArrayList(Adapter).init(alloc),
+            .debugTimes = std.AutoHashMap(usize, u64).init(alloc),
+            .debugNames = std.AutoHashMap(usize, []const u8).init(alloc),
         };
     }
     /// Returns a heap allocated game scene pointer. Recommended for create-and-go scenes you dont have to manage
@@ -71,6 +78,8 @@ pub const DefaultGameScene = struct {
         memory.scene = Container.init(alloc, DefaultGameScene.update);
         memory.updateSystems = std.ArrayList(Adapter).init(alloc);
         memory.renderSystems = std.ArrayList(Adapter).init(alloc);
+        memory.debugTimes    = std.AutoHashMap(usize, u64).init(alloc);
+        memory.debugNames    = std.AutoHashMap(usize, []const u8).init(alloc);
 
         return memory;
     }
@@ -80,13 +89,14 @@ pub const DefaultGameScene = struct {
     /// `fn(*xpro.scene.Container) void;`
     /// `fn(*xpro.World) void;`
     /// `fn(*DefaultGameScene) void;`
-    pub fn addUpdateSystem(self: *DefaultGameScene, comptime systemFn: anytype) !void {
+    pub fn addUpdateSystem(self: *DefaultGameScene, comptime systemFn: anytype, systemTagName: []const u8) !void {
+        self.debugNames.put(self.updateSystems.items.len, systemTagName) catch unreachable;
         switch(@TypeOf(systemFn)) {
             BasicSystemType       => {try self.updateSystems.append(.{.basic=@as(BasicSystemType,systemFn)});},
             ContainerSystemType   => {try self.updateSystems.append(.{.container=@as(ContainerSystemType,systemFn)});},
             TraditionalSystemType => {try self.updateSystems.append(.{.traditional=@as(TraditionalSystemType,systemFn)});},
             AdvancedSystemType    => {try self.updateSystems.append(.{.advanced=@as(AdvancedSystemType,systemFn)});},
-            else => @compileError("Failed to coerce `systemFn` into any application system function.")
+            else => @compileError("Failed to coerce `systemFn` into any ECS system function.")
         }
     }
     /// **systemFn** must be a function with one of the following signatures:
@@ -100,15 +110,15 @@ pub const DefaultGameScene = struct {
             ContainerSystemType   => {try self.renderSystems.append(.{.container=@as(ContainerSystemType,systemFn)});},
             TraditionalSystemType => {try self.renderSystems.append(.{.traditional=@as(TraditionalSystemType,systemFn)});},
             AdvancedSystemType    => {try self.renderSystems.append(.{.advanced=@as(AdvancedSystemType,systemFn)});},
-            else => @compileError("Failed to coerce `systemFn` into any application system function.")
+            else => @compileError("Failed to coerce `systemFn` into any ECS system function.")
         }
     }
 
     /// Adds the default update systems, allowing sprite animation, attached entities, and game camera logic.
     pub fn addDefaultUpdateSystems(self: *DefaultGameScene) !void {
-        try self.addUpdateSystem(xpro.systems.updateAnimation);
-        try self.addUpdateSystem(xpro.systems.updateAttachments);
-        try self.addUpdateSystem(xpro.systems.updateGameCamera);
+        try self.addUpdateSystem(xpro.systems.updateAnimation, "XProAnimation");
+        try self.addUpdateSystem(xpro.systems.updateAttachments, "XProAttachment");
+        try self.addUpdateSystem(xpro.systems.updateGameCamera, "XProGameCamera");
     }
     /// Adds the default render systems, allowing the drawing of tilemaps, shadow, sprites, and particles.
     pub fn addDefaultRenderSystems(self: *DefaultGameScene) !void {
@@ -119,9 +129,26 @@ pub const DefaultGameScene = struct {
     }
 
     // TODO: Remove/Disable/Enable systems by function pointer.
-    // TODO: Debug version of update that times each system for profiling.
 
     pub fn update(scene: *Container) void {
+        var self: *@This() = scene.parent(@This());
+
+        if(xpro.debug) { debugUpdate(scene); }
+        else           { fastUpdate(scene); }
+
+        if(xpro.debug) {
+            if(igBegin("Scene Stats", null, ImGuiWindowFlags_None)) {
+                for(self.updateSystems.items) |a, i| {
+                    if(self.debugTimes.contains(i)) {
+                        igFmtText("System #{any} {s}: {d:.4}ms", .{i, self.debugNames.get(i).?, @intToFloat(f64,self.debugTimes.get(i).?) / 1000000.0});
+                    }
+                }
+            }
+            igEnd();
+        }
+    }
+
+    pub fn fastUpdate(scene: *Container) void {
         var self: *@This() = scene.parent(@This());
 
         for(self.updateSystems.items) |updateSys| {
@@ -142,17 +169,27 @@ pub const DefaultGameScene = struct {
         }
     }
 
-    const entWrapper = struct {
-        const component = struct {
-            
-        };
-        name: []const u8,
-        components: []const component,
-    };
-    pub fn save(comptime path: []const u8) void {
-        const ds = xpro.serialization.deserializer(std.builtin.Endian.Big, xpro.serialization.Packing.Byte, entWrapper);
-    }
-    pub fn load(comptime path: []const u8) void {
-
+    pub fn debugUpdate(scene: *Container) void {
+        var self: *@This() = scene.parent(@This());
+        var timer = std.time.Timer.start() catch unreachable;
+        for(self.updateSystems.items) |updateSys, i| {
+            _ = timer.lap();
+            switch(updateSys) {
+                SignatureTag.basic => |basicSys| basicSys(),
+                SignatureTag.container => |containerSys| containerSys(&self.scene),
+                SignatureTag.traditional => |traditionalSys| traditionalSys(&self.scene.world),
+                SignatureTag.advanced => |advancedSys| advancedSys(self),
+            }
+            var time = timer.lap();
+            self.debugTimes.put(i, time) catch unreachable;
+        }
+        for(self.renderSystems.items) |renderSys| {
+            switch(renderSys) {
+                SignatureTag.basic => |basicSys| basicSys(),
+                SignatureTag.container => |containerSys| containerSys(&self.scene),
+                SignatureTag.traditional => |traditionalSys| traditionalSys(&self.scene.world),
+                SignatureTag.advanced => |advancedSys| advancedSys(self),
+            }
+        }
     }
 };

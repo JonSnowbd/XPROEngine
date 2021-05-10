@@ -3,13 +3,17 @@ const img_impl = @import("cimgui_impl.zig");
 pub const folders = @import("deps/known-folders/known-folders.zig");
 pub const ecs = @import("ecs");
 pub const raylib = @import("raylib");
-pub const imgui = @import("imgui.zig");
+pub const imgui = @import("tools/imgui.zig");
 pub const render = @import("rendering.zig");
 pub const mem = @import("mem.zig");
 pub const scene = @import("ecs/scene.zig");
 pub const load = @import("loader.zig");
-pub const physics = @import("physics.zig");
+pub const binarySerializer = @import("tools/binser.zig");
 pub const serialization = @import("tools/serialization.zig");
+
+pub const physics = struct {
+    pub const sweep = @import("physics/sweep.zig");
+};
 
 pub const components = @import("ecs/components.zig");
 pub const systems = @import("ecs/systems.zig");
@@ -25,6 +29,7 @@ pub const Vec = raylib.Vector2;
 pub const Rect = raylib.Rectangle;
 pub const Color = raylib.Color;
 pub const Texture = raylib.Texture2D;
+pub const Image = raylib.Image;
 pub const Camera = raylib.Camera2D;
 pub const Shader = raylib.Shader;
 pub const Font = raylib.SpriteFont;
@@ -34,7 +39,7 @@ pub const Mouse = raylib.MouseButton;
 pub const Entity = ecs.Entity;
 pub const World = ecs.Registry;
 
-/// The amount of time its been since the last render
+/// The amount of time its been since the last update/render
 pub var dt: f32 = 0.0;
 /// The delta time, unaffected by timescale.
 pub var rawDt: f32 = 0.0;
@@ -48,6 +53,8 @@ pub var mouseDelta: Vec = .{};
 pub var worldMouseDelta: Vec = .{};
 /// The universal camera used in the game.
 pub var cam: Camera = .{};
+/// The origin of the camera. 0.5 = center on each axis.
+pub var camOrigin: Vec = .{.x=0.5,.y=0.5};
 /// The currently playing scene that is updated every frame.
 pub var currentScene: *scene.Container = undefined;
 /// Whether or not the debug interface is open.
@@ -55,26 +62,30 @@ pub var debug: bool = false;
 /// Multiplier for dt.
 pub var timeScale: f32 = 1.0;
 
-pub fn init(allocator: *std.mem.Allocator) !void {
-    mem.initTmpAllocator();
-    load.init(allocator);
-    tools.init(allocator);
-    try render.init(allocator);
-    serialization.init(allocator);
+/// The basepath, for now its just the executable directory, eventually I will add
+/// some flexibility to add multiple base paths for pseudo mod support.
+pub var basePath: []const u8 = undefined;
+
+pub var allocator: *std.mem.Allocator = undefined;
+
+pub fn init(alloc: *std.mem.Allocator) !void {
+    allocator = alloc;
+    basePath = (try folders.getPath(alloc, folders.KnownFolder.executable_dir)) orelse "";
+    tools.init(alloc);
+    mem.initTmpAllocator(alloc);
+    load.init(alloc);
+    try render.init(alloc);
+    serialization.init(alloc);
 
     raylib.SetConfigFlags(@enumToInt(raylib.ConfigFlags.FLAG_WINDOW_RESIZABLE));
     raylib.InitWindow(1280,720, "XPRO");
 
     // Set camera state.
-    var offX = @intToFloat(f32,raylib.GetScreenWidth()) / 2.0;
-    var offY = @intToFloat(f32,raylib.GetScreenHeight()) / 2.0;
-    cam.offset.x = offX;
-    cam.offset.y = offY;
     cam.target.x = 0;
     cam.target.y = 0;
-    cam.zoom = 2;
+    cam.zoom = 1;
 
-    log("XPro start up complete!");
+    tools.log("XPro start up complete!");
 }
 
 pub fn run(userInitFn: fn() anyerror!void) !void {
@@ -87,8 +98,10 @@ pub fn run(userInitFn: fn() anyerror!void) !void {
     while(!raylib.WindowShouldClose()) {
         img_impl.newFrame();
 
-        tools.editor.run();
-        tools.console.run();
+        var offX = @intToFloat(f32,raylib.GetScreenWidth()) * camOrigin.x;
+        var offY = @intToFloat(f32,raylib.GetScreenHeight()) * camOrigin.y;
+        cam.offset.x = offX;
+        cam.offset.y = offY;
 
         update();
 
@@ -99,13 +112,12 @@ pub fn run(userInitFn: fn() anyerror!void) !void {
         img_impl.flush();
         raylib.EndDrawing();
     }
-
-    img_impl.deinit();
 }
 
 pub fn deinit() !void {
     load.deinit();
-    try render.deinit();
+    img_impl.deinit();
+    render.deinit();
     raylib.CloseWindow();
 }
 
@@ -135,13 +147,6 @@ fn update() void {
     currentScene.updateFn(currentScene);
 }
 
-pub fn log(message: []const u8) void {
-    if(tools.console.log.items.len + 1 >= 100) { // TODO: Swap to a FIFO structure for log, then up the limit.
-        _ = tools.console.log.orderedRemove(0);
-    }
-    tools.console.log.append(message) catch unreachable;
-}
-
 pub fn keyPressed(key: Keys) bool {
     var io = imgui.igGetIO();
     if(io.*.WantCaptureKeyboard) return false;
@@ -167,10 +172,37 @@ pub fn keyUp(key: Keys) bool {
     return raylib.IsKeyUp(@enumToInt(key));
 }
 
-pub fn loadUser(allocator: *std.mem.Allocator, userConfig: anytype) !void {
+pub fn loadUser(comptime userConfig: anytype) !void {
+    switch(@typeInfo(@TypeOf(userConfig))) {
+        .Pointer => { },
+        else => { @compileError("Userconfig needs to be a pointer."); }
+    }
+    var stream = binarySerializer.BinaryStream.init(allocator);
+    defer stream.deinit();
+    var folder = try std.fs.openDirAbsolute(basePath, .{});
+    defer folder.close();
 
+    var userFile = folder.openFile("user", .{}) catch |err| switch(err) {
+        error.FileNotFound => {
+            // File not found means exit early.
+            return;
+        },
+        else => {return err;}
+    };
+    defer userFile.close();
+    try stream.loadFromFile(&folder, "user");
+    stream.read(userConfig);
 }
-pub fn saveUser(allocator: *std.mem.Allocator, userConfig: anytype) !void {
-    var bytes = std.ArrayList(u8).init(allocator);
-    std.json.stringify(userConfig, .{}, bytes.writer());
+pub fn saveUser(comptime userConfig: anytype) !void {
+    switch(@typeInfo(@TypeOf(userConfig))) {
+        .Pointer => { },
+        else => { @compileError("Userconfig needs to be a pointer."); }
+    }
+    var stream = binarySerializer.BinaryStream.init(allocator);
+    defer stream.deinit();
+    var folder = try std.fs.openDirAbsolute(basePath, .{});
+    defer folder.close();
+
+    stream.write(userConfig);
+    try folder.writeFile("user", stream.backing.items);
 }

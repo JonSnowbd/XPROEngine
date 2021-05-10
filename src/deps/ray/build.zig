@@ -71,7 +71,6 @@ pub fn link(exe: *std.build.LibExeObjStep, comptime rayPkgPath: []const u8) void
     }
     exe.linkLibC();
 
-    // TODO: Add 
     exe.addCSourceFile(rayPkgPath++"src/raylib/src/core.c", flags);
     exe.addCSourceFile(rayPkgPath++"src/raylib/src/models.c", flags);
     exe.addCSourceFile(rayPkgPath++"src/raylib/src/raudio.c", flags);
@@ -101,7 +100,7 @@ const path = std.fs.path;
 const fs = std.fs;
 
 /// Pass in a relative path to a folder, and its content is added to the zig-cache/bin output.
-/// TODO: Lookup where zig defines the output folder to make it bulletproof.
+/// TODO: Lookup where zig defines the output folder to make it more bulletproof.
 pub fn addGameContent(comptime baseContentPath: []const u8) AddContentErrors!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 

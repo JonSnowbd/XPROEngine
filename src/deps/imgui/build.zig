@@ -18,7 +18,7 @@ pub fn link(b: *Builder, exe: *std.build.LibExeObjStep, target: std.build.Target
         exe.linkSystemLibrary("gdi32");
         exe.linkLibC();
         exe.linkSystemLibrary("c++");
-    }
+    } // Todo: other platforms...
 
     exe.addIncludeDir(prefix_path ++ "cimgui/imgui");
     exe.addIncludeDir(prefix_path ++ "cimgui");

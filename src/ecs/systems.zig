@@ -49,7 +49,7 @@ pub const GameCameraUpdateStyle = enum {
     Averaged
 };
 pub fn updateGameCamera(world: *xpro.World) void {
-    if(xpro.debug)
+    if(xpro.debug) // Debugging means the editor will control the camera.
         return;
     
     var view = xpro.World.view(world, .{cmp.CameraFocus, cmp.Position}, .{cmp.Invisible});
@@ -76,12 +76,17 @@ pub fn drawSprites(world: *xpro.World) void {
         const spr = view.getConst(cmp.Sprite, ent);
         const depth = view.getConst(cmp.Depth, ent);
 
-        var dest = xpro.Vec{.x=spr.source.width,.y=spr.source.height};
-        render.texPro(depth.value, pos.value, xpro.load.texture(spr.texture), dest, spr.source, pos.value.y, 0.0, spr.origin, spr.color);
+        var sourceCpy = spr.source;
+        if(spr.hFlip) { sourceCpy.width = -sourceCpy.width; }
+        if(spr.vFlip) { sourceCpy.height = -sourceCpy.height; }
+
+        var size = xpro.Vec{.x=spr.source.width,.y=spr.source.height};
+        render.texPro(depth.value, pos.value, xpro.load.texture(spr.texture), size, sourceCpy, pos.value.y, 0.0, spr.origin, spr.color);
+
 
         if(xpro.debug){
             render.rect(depth.value+0.001, pos.value.x-1, pos.value.y-1, 2,2, xpro.theme.Info, null);
-            render.rectHollow(depth.value+0.001, pos.value.x - (dest.x * spr.origin.x), pos.value.y - (dest.y * spr.origin.y), dest.x, dest.y, 2.0,xpro.theme.Info, null);
+            render.rectHollow(depth.value+0.001, pos.value.x - (size.x * spr.origin.x), pos.value.y - (size.y * spr.origin.y), size.x, size.y, 2.0,xpro.theme.Info, null);
         }
     }
 }
